@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "ReviewLens",
+  "version": "0.1.0",
+  "description": "AI browser extension that detects potentially fake product reviews.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ReviewLens"
+  }
+}
+

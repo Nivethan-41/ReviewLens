@@ -139,6 +139,33 @@ reviewlens/
 
 ---
 
+## Feature Engineering & Deception Indicators
+
+ReviewLens combines word and character TF-IDF representations with 15 stylometric features designed to capture linguistic anomalies characteristic of deceptive, incentivized, or computer-generated product reviews:
+
+### 1. TF-IDF Representations
+- **Word TF-IDF ((1, 2)-grams on normalized text):** Extracts unigram and bigram token sequences from normalized text while preserving critical negations (`not`, `no`, `never`, `don't`). Deceptive reviews frequently exhibit distinct semantic signatures and formulaic sentiment patterns.
+- **Character TF-IDF ((3, 5)-grams on cleaned text):** Captures sub-word morphology, character n-grams, and typographical habits, providing robustness against misspellings and subtle styling patterns.
+
+### 2. Stylometric Features (15 Metrics)
+- **`word_count` (Word Count):** Deceptive reviews frequently skew toward extremes—either abnormally brief generic blurbs or artificially bloated, repetitive praise.
+- **`char_count` (Character Count):** Measures raw text length, complementing word count to establish structural density.
+- **`avg_word_length` (Average Word Length):** Authentic reviews often discuss technical or operational details with domain-specific vocabulary (longer words), whereas fake reviews tend to use simplistic, generic descriptions.
+- **`exclamation_count` (Exclamation Count):** High counts of `!` signal manufactured enthusiasm, agitation, or hyperbole.
+- **`exclamation_ratio` (Exclamation Ratio):** Proportion of exclamation marks relative to total text characters, normalizing punctuation intensity across short and long reviews.
+- **`question_mark_ratio` (Question Mark Ratio):** Rhetorical questions (e.g., *"Why wait to buy?"*) are common in promotional copy and sales pitches.
+- **`uppercase_word_ratio` (Uppercase-Word Ratio):** Ratio of all-caps words (e.g., *"AMAZING"*, *"MUST BUY"*), measuring aggressive shouting and sentiment inflation.
+- **`first_person_ratio` (First-Person Pronoun Ratio: I, me, my, we):** Genuine reviews often ground their claims in tangible personal narratives, whereas deceptive reviews often lack personal grounding or unnaturally overcompensate with repeated self-reference.
+- **`second_person_ratio` (Second-Person Pronoun Ratio: you, your):** Promotional spam and fake reviews frequently target the reader directly to convince them to purchase.
+- **`superlative_count` (Superlative & Intensifier Count):** Tracks extreme evaluative terms (`best`, `amazing`, `perfect`, `worst`, `incredible`, `100%`) that indicate unbalanced praise or ungrounded defamation.
+- **`lexical_diversity` (Lexical Diversity / Type-Token Ratio):** Ratio of unique words to total words. Low diversity indicates templated writing or limited vocabulary.
+- **`repeated_word_ratio` (Repeated-Word Ratio):** Proportion of tokens belonging to repeated words, detecting keyword stuffing and formulaic sentence structures.
+- **`digit_ratio` (Digit Ratio):** Authentic reviews regularly cite concrete numerical specifics (e.g., battery life in hours, dimensions, days of use, model numbers); fake reviews rarely contain verifiable digits.
+- **`sentence_count` (Sentence Count):** Structural metric capturing the number of sentences in the review.
+- **`avg_sentence_length` (Average Sentence Length):** Syntactic complexity metric (words per sentence); fake reviews often rely on punchy promotional slogans or rambling run-ons.
+
+---
+
 ## Makefile Targets
 
 | Target | Description |

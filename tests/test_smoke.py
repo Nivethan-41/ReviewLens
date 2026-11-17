@@ -9,6 +9,7 @@ from ml.config import (
     PROCESSED_DATA_DIR,
     MODELS_DIR,
     MODEL_PATH,
+    FEATURES_PATH,
     RANDOM_SEED,
     TEST_SIZE,
     VAL_SIZE,
@@ -45,6 +46,7 @@ def test_config_constants():
     assert PROCESSED_DATA_DIR.name == "processed"
     assert MODELS_DIR.name == "models"
     assert MODEL_PATH.name == "model.joblib"
+    assert FEATURES_PATH.name == "features.joblib"
 
     assert RANDOM_SEED == 42
     assert TEST_SIZE == 0.1

@@ -17,6 +17,7 @@ PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
 
 MODELS_DIR: Path = PROJECT_ROOT / "models"
 MODEL_PATH: Path = MODELS_DIR / "model.joblib"
+FEATURES_PATH: Path = MODELS_DIR / "features.joblib"
 METRICS_PATH: Path = MODELS_DIR / "metrics.json"
 
 NOTEBOOKS_DIR: Path = PROJECT_ROOT / "notebooks"

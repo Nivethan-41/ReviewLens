@@ -26,6 +26,7 @@ METRICS_PATH: Path = MODELS_DIR / "metrics.json"
 REPORTS_DIR: Path = MODELS_DIR / "reports"
 CONFUSION_MATRIX_PATH: Path = REPORTS_DIR / "confusion_matrix.png"
 ROC_CURVE_PATH: Path = REPORTS_DIR / "roc_curve.png"
+CALIBRATION_CURVE_PATH: Path = REPORTS_DIR / "calibration_curve.png"
 EVALUATION_REPORT_PATH: Path = REPORTS_DIR / "test_metrics.json"
 
 NOTEBOOKS_DIR: Path = PROJECT_ROOT / "notebooks"
@@ -34,6 +35,10 @@ NOTEBOOKS_DIR: Path = PROJECT_ROOT / "notebooks"
 RANDOM_SEED: int = 42
 TEST_SIZE: float = 0.1
 VAL_SIZE: float = 0.1
+
+# Confidence and Uncertainty Band Thresholds
+UNCERTAIN_LOWER: float = 0.45
+UNCERTAIN_UPPER: float = 0.55
 
 # TF-IDF Feature Extraction Settings
 TFIDF_WORD_NGRAM_RANGE: Tuple[int, int] = (1, 2)

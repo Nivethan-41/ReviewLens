@@ -21,12 +21,17 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import joblib
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import sparse
+from sklearn.base import clone
+from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, brier_score_loss, f1_score
 from sklearn.model_selection import (
     ParameterGrid,
     RandomizedSearchCV,
@@ -37,15 +42,18 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
 from ml.config import (
+    CALIBRATION_CURVE_PATH,
     FEATURES_PATH,
     METRICS_PATH,
     MODEL_PATH,
     MODEL_VERSION,
     RANDOM_SEED,
+    REPORTS_DIR,
     TEST_DATA_PATH,
     TRAIN_DATA_PATH,
     VAL_DATA_PATH,
 )
+from ml.explain import compute_stylometric_stats
 from ml.features import build_feature_pipeline, save_feature_pipeline
 
 logging.basicConfig(
@@ -500,6 +508,175 @@ def run_feature_ablation_study(
     return ablation_results
 
 
+def plot_calibration_curve(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    method_name: str = "sigmoid",
+    brier_score: Optional[float] = None,
+    save_path: Path | str = CALIBRATION_CURVE_PATH,
+    n_bins: int = 10,
+) -> Path:
+    """Plot and save calibration curve (reliability diagram).
+
+    Args:
+        y_true: Ground truth binary targets (0 = genuine, 1 = deceptive).
+        y_prob: Predicted probability of positive class (class 1).
+        method_name: Name of calibration method ('sigmoid' or 'isotonic').
+        brier_score: Optional computed validation Brier score.
+        save_path: Output file path for PNG plot. Defaults to CALIBRATION_CURVE_PATH.
+        n_bins: Maximum number of bins for calibration curve. Defaults to 10.
+
+    Returns:
+        Path to saved PNG file.
+    """
+    path = Path(save_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    effective_bins = min(n_bins, max(2, len(y_true) // 2))
+    try:
+        prob_true, prob_pred = calibration_curve(
+            y_true, y_prob, n_bins=effective_bins, strategy="uniform"
+        )
+    except Exception:
+        prob_true, prob_pred = calibration_curve(
+            y_true, y_prob, n_bins=2, strategy="uniform"
+        )
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
+    brier_str = f" (Brier: {brier_score:.4f})" if brier_score is not None else ""
+    ax.plot(
+        prob_pred,
+        prob_true,
+        "s-",
+        color="#1f77b4",
+        linewidth=2,
+        markersize=6,
+        label=f"Calibrated ({method_name}){brier_str}",
+    )
+
+    ax.set_xlabel("Mean Predicted Probability (Deceptive)", fontsize=10)
+    ax.set_ylabel("Fraction of Positives", fontsize=10)
+    ax.set_title(f"ReviewLens Calibration Curve ({method_name.capitalize()})", fontsize=12)
+    ax.set_xlim([-0.05, 1.05])
+    ax.set_ylim([-0.05, 1.05])
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(loc="lower right", fontsize=9)
+
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    logger.info("Saved calibration curve plot to: %s", path)
+    return path
+
+
+def calibrate_classifier(
+    chosen_classifier: Any,
+    feature_pipeline: Pipeline,
+    X_train: pd.Series | list[str],
+    y_train: pd.Series | np.ndarray,
+    X_val: pd.Series | list[str],
+    y_val: pd.Series | np.ndarray,
+    random_seed: int = RANDOM_SEED,
+    calibration_curve_path: Path | str = CALIBRATION_CURVE_PATH,
+) -> tuple[CalibratedClassifierCV, str, dict[str, Any], Path]:
+    """Wrap classifier with CalibratedClassifierCV, selecting sigmoid or isotonic via val Brier score.
+
+    Args:
+        chosen_classifier: Estimator instance to calibrate.
+        feature_pipeline: Fitted feature extraction Pipeline.
+        X_train: Training texts.
+        y_train: Training labels.
+        X_val: Validation texts.
+        y_val: Validation labels.
+        random_seed: Random seed.
+        calibration_curve_path: Destination for calibration curve PNG.
+
+    Returns:
+        Tuple of (fitted_calibrated_classifier, best_method, calibration_metrics_dict, plot_path).
+    """
+    logger.info("Calibrating classifier with CalibratedClassifierCV...")
+
+    X_train_trans = feature_pipeline.transform(X_train)
+    X_val_trans = feature_pipeline.transform(X_val)
+
+    y_train_arr = np.array(y_train, dtype=int)
+    y_val_arr = np.array(y_val, dtype=int)
+
+    min_class_count = min(np.bincount(y_train_arr))
+    effective_cv_splits = max(2, min(5, min_class_count))
+    cv = StratifiedKFold(
+        n_splits=effective_cv_splits,
+        shuffle=True,
+        random_state=random_seed,
+    )
+
+    methods = ["sigmoid", "isotonic"]
+    calibrated_candidates: dict[str, Any] = {}
+    brier_scores: dict[str, float] = {}
+    val_probs: dict[str, np.ndarray] = {}
+
+    for method in methods:
+        base_clone = clone(chosen_classifier)
+        cal = CalibratedClassifierCV(
+            estimator=base_clone,
+            method=method,
+            cv=cv,
+        )
+        cal.fit(X_train_trans, y_train_arr)
+        prob = cal.predict_proba(X_val_trans)[:, 1]
+        try:
+            brier = float(brier_score_loss(y_val_arr, prob))
+        except Exception:
+            brier = 0.5
+
+        calibrated_candidates[method] = cal
+        brier_scores[method] = brier
+        val_probs[method] = prob
+
+        logger.info(
+            "Calibration [%s]: Validation Brier score = %.4f",
+            method,
+            brier,
+        )
+
+    # Pick method with lower Brier score (ties go to sigmoid)
+    if brier_scores["isotonic"] < brier_scores["sigmoid"]:
+        best_method = "isotonic"
+    else:
+        best_method = "sigmoid"
+
+    best_cal = calibrated_candidates[best_method]
+    best_brier = brier_scores[best_method]
+    best_prob = val_probs[best_method]
+
+    logger.info(
+        "Chosen calibration method: '%s' (Brier: %.4f vs Sigmoid: %.4f, Isotonic: %.4f)",
+        best_method,
+        best_brier,
+        brier_scores["sigmoid"],
+        brier_scores["isotonic"],
+    )
+
+    plot_path = plot_calibration_curve(
+        y_true=y_val_arr,
+        y_prob=best_prob,
+        method_name=best_method,
+        brier_score=best_brier,
+        save_path=calibration_curve_path,
+    )
+
+    cal_metrics = {
+        "chosen_method": best_method,
+        "val_brier_score": round(best_brier, 4),
+        "sigmoid_brier_score": round(brier_scores["sigmoid"], 4),
+        "isotonic_brier_score": round(brier_scores["isotonic"], 4),
+        "calibration_curve_png": str(plot_path),
+    }
+
+    return best_cal, best_method, cal_metrics, plot_path
+
+
 def save_model(pipeline: Pipeline, path: Path | str = MODEL_PATH) -> Path:
     """Save trained pipeline artifact to disk using joblib.
 
@@ -539,6 +716,7 @@ def print_comparison_table(
     results: dict[str, dict[str, Any]],
     chosen_model: str,
     ablation: dict[str, dict[str, Any]],
+    calibration: Optional[dict[str, Any]] = None,
 ) -> None:
     """Print readable summary tables for model comparison and ablation results.
 
@@ -546,6 +724,7 @@ def print_comparison_table(
         results: Dictionary of candidate model results.
         chosen_model: Name of chosen best model.
         ablation: Dictionary of ablation study results.
+        calibration: Optional dictionary of calibration metrics.
     """
     print("\n" + "=" * 78)
     print("                      REVIEWLENS MODEL COMPARISON")
@@ -574,7 +753,20 @@ def print_comparison_table(
     for setup_name, a_res in ablation.items():
         features_str = ", ".join(a_res["features"])
         print(f"{setup_name:<28} | {features_str:<30} | {a_res['val_macro_f1']:.4f}")
-    print("=" * 78 + "\n")
+    print("=" * 78)
+
+    if calibration:
+        print("\n" + "-" * 78)
+        print("                      PROBABILITY CALIBRATION")
+        print("-" * 78)
+        print(f"Selected Method:      {calibration['chosen_method'].capitalize()} (selected via Validation Brier Score)")
+        print(f"Val Brier Score:      {calibration['val_brier_score']:.4f}")
+        print(f"  - Sigmoid Brier:    {calibration['sigmoid_brier_score']:.4f}")
+        print(f"  - Isotonic Brier:   {calibration['isotonic_brier_score']:.4f}")
+        print(f"Calibration Curve:    {calibration['calibration_curve_png']}")
+        print("=" * 78 + "\n")
+    else:
+        print("\n")
 
 
 def train(
@@ -583,10 +775,11 @@ def train(
     test_path: Path | str = TEST_DATA_PATH,
     model_save_path: Path | str = MODEL_PATH,
     metrics_save_path: Path | str = METRICS_PATH,
+    calibration_curve_path: Path | str = CALIBRATION_CURVE_PATH,
     n_iter: int = 5,
     random_seed: int = RANDOM_SEED,
 ) -> dict[str, Any]:
-    """Execute end-to-end training, hyperparameter tuning, model selection, and artifact saving.
+    """Execute end-to-end training, hyperparameter tuning, model selection, calibration, and artifact saving.
 
     Args:
         train_path: Path to train.csv.
@@ -594,6 +787,7 @@ def train(
         test_path: Path to test.csv (for row count record).
         model_save_path: Destination for model.joblib.
         metrics_save_path: Destination for metrics.json.
+        calibration_curve_path: Destination for calibration_curve.png.
         n_iter: Number of iterations for hyperparameter search.
         random_seed: Random seed.
 
@@ -675,15 +869,54 @@ def train(
         y_val=y_val,
     )
 
-    # 8. Save model pipeline and features pipeline
-    save_model(chosen_pipeline, model_save_path)
-    if "features" in chosen_pipeline.named_steps:
+    # 8. Calibration: wrap chosen classifier with CalibratedClassifierCV
+    feature_pipeline = chosen_pipeline.named_steps["features"]
+    calibrated_clf, best_cal_method, cal_metrics, cal_plot_path = calibrate_classifier(
+        chosen_classifier=chosen_clf_estimator,
+        feature_pipeline=feature_pipeline,
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        random_seed=random_seed,
+        calibration_curve_path=calibration_curve_path,
+    )
+
+    # 9. Compute training-set stylometric stats and surrogate model for explanations
+    stylometric_stats = compute_stylometric_stats(X_train, y_train)
+
+    # Fit surrogate LogisticRegression on full features for non-linear explainability fallback
+    surrogate_lr = LogisticRegression(
+        class_weight="balanced",
+        solver="liblinear",
+        random_state=random_seed,
+    )
+    surrogate_lr.fit(feature_pipeline.transform(X_train), y_train)
+
+    # Assemble final calibrated pipeline with explainability metadata attached
+    final_pipeline = Pipeline([
+        ("features", feature_pipeline),
+        ("classifier", calibrated_clf),
+    ])
+    final_pipeline.stylometric_stats_ = stylometric_stats
+    final_pipeline.surrogate_model_ = surrogate_lr
+    final_pipeline.bundle_ = {
+        "pipeline": final_pipeline,
+        "stylometric_stats": stylometric_stats,
+        "surrogate_model": surrogate_lr,
+        "calibration_method": best_cal_method,
+        "chosen_model": chosen_name,
+    }
+
+    # 10. Save model pipeline and features pipeline
+    save_model(final_pipeline, model_save_path)
+    if "features" in final_pipeline.named_steps:
         save_feature_pipeline(
-            chosen_pipeline.named_steps["features"],
+            final_pipeline.named_steps["features"],
             FEATURES_PATH,
         )
 
-    # 9. Format and save metrics.json
+    # 11. Format and save metrics.json
     model_comparisons_serializable: dict[str, Any] = {}
     for name, r in results.items():
         model_comparisons_serializable[name] = {
@@ -708,12 +941,13 @@ def train(
         "dataset_rows": dataset_rows,
         "model_comparisons": model_comparisons_serializable,
         "ablation": ablation_results,
+        "calibration": cal_metrics,
     }
 
     save_metrics(metrics_data, metrics_save_path)
 
-    # 10. Print formatted tables
-    print_comparison_table(results, chosen_name, ablation_results)
+    # 12. Print formatted tables
+    print_comparison_table(results, chosen_name, ablation_results, cal_metrics)
 
     logger.info("Training pipeline completed successfully.")
     return metrics_data

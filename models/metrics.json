@@ -1,6 +1,6 @@
 {
   "model_version": "0.1.0",
-  "training_date": "2026-11-18T01:50:20.920421+00:00",
+  "training_date": "2026-11-18T05:11:34.582631+00:00",
   "chosen_model": "LogisticRegression",
   "chosen_val_macro_f1": 1.0,
   "dataset_rows": {
@@ -66,5 +66,12 @@
       "val_macro_f1": 1.0,
       "val_accuracy": 1.0
     }
+  },
+  "calibration": {
+    "chosen_method": "isotonic",
+    "val_brier_score": 0.0039,
+    "sigmoid_brier_score": 0.027,
+    "isotonic_brier_score": 0.0039,
+    "calibration_curve_png": "E:\\Programming\\MINIPROJECT-GRP2\\ReviewLens\\models\\reports\\calibration_curve.png"
   }
 }

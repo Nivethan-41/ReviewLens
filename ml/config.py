@@ -50,6 +50,32 @@ TFIDF_MAX_FEATURES: int = 20000
 # Model Version
 MODEL_VERSION: str = "0.1.0"
 
+# Reliability Scorer Weights (must sum to 1.0)
+RELIABILITY_WEIGHT_NON_SUSPICIOUS: float = 0.45
+RELIABILITY_WEIGHT_NEAR_DUPLICATE: float = 0.20
+RELIABILITY_WEIGHT_RATING_SKEW: float = 0.15
+RELIABILITY_WEIGHT_REVIEW_BURST: float = 0.10
+RELIABILITY_WEIGHT_LENGTH_SPECIFICITY: float = 0.10
+
+# Reliability Thresholds and Threshold Boundaries
+NEAR_DUPLICATE_SIMILARITY_THRESHOLD: float = 0.85
+RELIABILITY_HIGH_THRESHOLD: int = 70
+RELIABILITY_MODERATE_THRESHOLD: int = 40
+MIN_REVIEWS_FOR_RELIABILITY: int = 5
+
+# Rating Distribution Skew Thresholds
+RATING_SKEW_5STAR_THRESHOLD: float = 0.65
+RATING_J_SHAPED_THRESHOLD: float = 0.80
+
+# Review Burst Thresholds
+BURST_WINDOW_DAYS: int = 3
+BURST_MAX_DAY_RATIO: float = 0.35
+
+# Length and Specificity Thresholds
+SPECIFICITY_TARGET_WORD_COUNT: int = 40
+MAX_REVIEW_TEXT_LENGTH: int = 5000
+MAX_REVIEWS_PER_CALL: int = 200
+
 # Required NLTK resources
 NLTK_PACKAGES: List[str] = ["stopwords", "punkt", "punkt_tab", "wordnet"]
 

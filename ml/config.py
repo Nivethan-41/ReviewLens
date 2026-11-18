@@ -15,10 +15,18 @@ DATA_DIR: Path = PROJECT_ROOT / "data"
 RAW_DATA_DIR: Path = DATA_DIR / "raw"
 PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
 
+TRAIN_DATA_PATH: Path = PROCESSED_DATA_DIR / "train.csv"
+VAL_DATA_PATH: Path = PROCESSED_DATA_DIR / "val.csv"
+TEST_DATA_PATH: Path = PROCESSED_DATA_DIR / "test.csv"
+
 MODELS_DIR: Path = PROJECT_ROOT / "models"
 MODEL_PATH: Path = MODELS_DIR / "model.joblib"
 FEATURES_PATH: Path = MODELS_DIR / "features.joblib"
 METRICS_PATH: Path = MODELS_DIR / "metrics.json"
+REPORTS_DIR: Path = MODELS_DIR / "reports"
+CONFUSION_MATRIX_PATH: Path = REPORTS_DIR / "confusion_matrix.png"
+ROC_CURVE_PATH: Path = REPORTS_DIR / "roc_curve.png"
+EVALUATION_REPORT_PATH: Path = REPORTS_DIR / "test_metrics.json"
 
 NOTEBOOKS_DIR: Path = PROJECT_ROOT / "notebooks"
 

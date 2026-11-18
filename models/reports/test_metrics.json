@@ -1,0 +1,44 @@
+{
+  "evaluation_timestamp": "2026-11-18T01:50:28.465214+00:00",
+  "model_version": "0.1.0",
+  "test_sample_count": 12,
+  "metrics": {
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "roc_auc": 1.0,
+    "per_class": {
+      "genuine_0": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "deceptive_1": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      }
+    },
+    "confusion_matrix": {
+      "matrix": [
+        [
+          6,
+          0
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "tn": 6,
+      "fp": 0,
+      "fn": 0,
+      "tp": 6
+    }
+  },
+  "artifacts": {
+    "confusion_matrix_png": "E:\\Programming\\MINIPROJECT-GRP2\\ReviewLens\\models\\reports\\confusion_matrix.png",
+    "roc_curve_png": "E:\\Programming\\MINIPROJECT-GRP2\\ReviewLens\\models\\reports\\roc_curve.png"
+  }
+}

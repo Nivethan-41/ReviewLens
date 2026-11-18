@@ -1,0 +1,70 @@
+{
+  "model_version": "0.1.0",
+  "training_date": "2026-11-18T01:50:20.920421+00:00",
+  "chosen_model": "LogisticRegression",
+  "chosen_val_macro_f1": 1.0,
+  "dataset_rows": {
+    "train": 96,
+    "val": 12,
+    "test": 12
+  },
+  "model_comparisons": {
+    "LogisticRegression": {
+      "cv_macro_f1_mean": 1.0,
+      "cv_macro_f1_std": 0.0,
+      "val_macro_f1": 1.0,
+      "val_accuracy": 1.0,
+      "tuned": true,
+      "best_params": {
+        "classifier__C": "0.05"
+      },
+      "is_best": true
+    },
+    "LinearSVC": {
+      "cv_macro_f1_mean": 1.0,
+      "cv_macro_f1_std": 0.0,
+      "val_macro_f1": 1.0,
+      "val_accuracy": 1.0,
+      "tuned": true,
+      "best_params": {
+        "classifier__C": "0.01"
+      },
+      "is_best": false
+    },
+    "RandomForest": {
+      "cv_macro_f1_mean": 1.0,
+      "cv_macro_f1_std": 0.0,
+      "val_macro_f1": 1.0,
+      "val_accuracy": 1.0,
+      "tuned": false,
+      "best_params": null,
+      "is_best": false
+    }
+  },
+  "ablation": {
+    "word_tfidf_only": {
+      "features": [
+        "word_tfidf"
+      ],
+      "val_macro_f1": 1.0,
+      "val_accuracy": 1.0
+    },
+    "word_plus_char_tfidf": {
+      "features": [
+        "word_tfidf",
+        "char_tfidf"
+      ],
+      "val_macro_f1": 1.0,
+      "val_accuracy": 1.0
+    },
+    "full_features": {
+      "features": [
+        "word_tfidf",
+        "char_tfidf",
+        "stylometric"
+      ],
+      "val_macro_f1": 1.0,
+      "val_accuracy": 1.0
+    }
+  }
+}

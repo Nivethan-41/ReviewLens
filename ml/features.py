@@ -297,43 +297,62 @@ def _to_text_list(X: Any, key: str = "text") -> list[str]:
     return [str(X)]
 
 
-def build_feature_pipeline() -> Pipeline:
+def build_feature_pipeline(
+    include_word: bool = True,
+    include_char: bool = True,
+    include_stylometric: bool = True,
+) -> Pipeline:
     """Build an unfitted scikit-learn feature extraction pipeline.
 
     Combines:
-    1. Word TF-IDF (1, 2)-grams on normalized text.
-    2. Character TF-IDF (3, 5)-grams on cleaned text.
-    3. Scaled stylometric features on raw text.
+    1. Word TF-IDF (1, 2)-grams on normalized text (optional).
+    2. Character TF-IDF (3, 5)-grams on cleaned text (optional).
+    3. Scaled stylometric features on raw text (optional).
 
     Uses settings from ml/config.py.
 
+    Args:
+        include_word: Whether to include word TF-IDF features. Defaults to True.
+        include_char: Whether to include character TF-IDF features. Defaults to True.
+        include_stylometric: Whether to include stylometric features. Defaults to True.
+
     Returns:
         Unfitted Pipeline combining TextSelector and FeatureUnion.
+
+    Raises:
+        ValueError: If all feature extraction components are disabled.
     """
-    word_tfidf = TfidfVectorizer(
-        ngram_range=TFIDF_WORD_NGRAM_RANGE,
-        max_features=TFIDF_WORD_MAX_FEATURES,
-        token_pattern=r"(?u)\b\w+\b",
-        preprocessor=normalize_for_tfidf,
-    )
+    transformers = []
 
-    char_tfidf = TfidfVectorizer(
-        ngram_range=TFIDF_CHAR_NGRAM_RANGE,
-        max_features=TFIDF_CHAR_MAX_FEATURES,
-        analyzer="char",
-        preprocessor=clean_text,
-    )
+    if include_word:
+        word_tfidf = TfidfVectorizer(
+            ngram_range=TFIDF_WORD_NGRAM_RANGE,
+            max_features=TFIDF_WORD_MAX_FEATURES,
+            token_pattern=r"(?u)\b\w+\b",
+            preprocessor=normalize_for_tfidf,
+        )
+        transformers.append(("word_tfidf", word_tfidf))
 
-    stylo_pipeline = Pipeline([
-        ("extract", StylometricFeatures()),
-        ("scale", StandardScaler()),
-    ])
+    if include_char:
+        char_tfidf = TfidfVectorizer(
+            ngram_range=TFIDF_CHAR_NGRAM_RANGE,
+            max_features=TFIDF_CHAR_MAX_FEATURES,
+            analyzer="char",
+            preprocessor=clean_text,
+        )
+        transformers.append(("char_tfidf", char_tfidf))
 
-    features = FeatureUnion([
-        ("word_tfidf", word_tfidf),
-        ("char_tfidf", char_tfidf),
-        ("stylometric", stylo_pipeline),
-    ])
+    if include_stylometric:
+        stylo_pipeline = Pipeline([
+            ("extract", StylometricFeatures()),
+            ("scale", StandardScaler()),
+        ])
+        transformers.append(("stylometric", stylo_pipeline))
+
+    if not transformers:
+        raise ValueError("At least one feature extraction branch must be enabled.")
+
+    features = FeatureUnion(transformers)
 
     pipeline = Pipeline([
         ("selector", TextSelector()),

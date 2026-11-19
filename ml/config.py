@@ -76,6 +76,17 @@ SPECIFICITY_TARGET_WORD_COUNT: int = 40
 MAX_REVIEW_TEXT_LENGTH: int = 5000
 MAX_REVIEWS_PER_CALL: int = 200
 
+# API and CORS Configuration
+API_HOST: str = "127.0.0.1"
+API_PORT: int = 8000
+CORS_ALLOWED_ORIGINS: List[str] = [
+    "http://localhost",
+    "http://localhost:8000",
+    "http://127.0.0.1",
+    "http://127.0.0.1:8000",
+]
+CORS_ALLOWED_ORIGIN_REGEX: str = r"^chrome-extension://.*"
+
 # Required NLTK resources
 NLTK_PACKAGES: List[str] = ["stopwords", "punkt", "punkt_tab", "wordnet"]
 

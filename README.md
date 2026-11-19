@@ -125,8 +125,130 @@ reviewlens/
    ```bash
    make serve
    # or:
-   uvicorn api.main:app --reload
+   uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
    ```
+
+---
+
+## Running the REST API Server
+
+Start the ReviewLens REST API service:
+
+```bash
+make serve
+# or manually via uvicorn:
+uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+The API runs at `http://localhost:8000` (and `http://127.0.0.1:8000`). OpenAPI documentation is available at `http://localhost:8000/docs`.
+
+### Testing the API with curl
+
+#### 1. Health Check (`GET /health`)
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "model_version": "0.1.0"
+}
+```
+
+#### 2. Analyze Reviews (`POST /analyze`)
+
+The following curl command sends 3 product reviews (with mix of genuine and suspicious texts) to the `/analyze` endpoint:
+
+```bash
+curl -X POST http://localhost:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "page_url": "https://example.com/products/wireless-headphones",
+    "reviews": [
+      {
+        "id": "r1",
+        "text": "Solid headphones for the price. The noise cancellation works fine in an office setting, though bass could be a bit punchier. Battery lasts around 18 hours.",
+        "rating": 4,
+        "date": "2026-09-02"
+      },
+      {
+        "id": "r2",
+        "text": "AMAZING PRODUCT!! BEST PURCHASE EVER!! 100% RECOMMEND TO EVERYONE DO NOT HESITATE BUY IT NOW WOW WOW WOW!!!",
+        "rating": 5,
+        "date": "2026-10-01"
+      },
+      {
+        "id": "r3",
+        "text": "Terrible customer support. The package arrived with a dented box and the left earbud stopped charging after 2 days. Had to return it.",
+        "rating": 1,
+        "date": "2026-09-10"
+      }
+    ]
+  }'
+```
+
+Sample response payload:
+```json
+{
+  "results": [
+    {
+      "id": "r1",
+      "label": "genuine",
+      "confidence": 0.7737,
+      "reasons": [
+        {
+          "type": "language",
+          "text": "Contains phrases typical of genuine reviews: 'hour', 'battery', 'bass'"
+        }
+      ]
+    },
+    {
+      "id": "r2",
+      "label": "suspicious",
+      "confidence": 1.0,
+      "reasons": [
+        {
+          "type": "style",
+          "text": "Unusually high proportion of ALL-CAPS words"
+        },
+        {
+          "type": "style",
+          "text": "Unusually many exclamation marks"
+        },
+        {
+          "type": "style",
+          "text": "Very short and generic"
+        }
+      ]
+    },
+    {
+      "id": "r3",
+      "label": "genuine",
+      "confidence": 0.6576,
+      "reasons": [
+        {
+          "type": "language",
+          "text": "Contains phrases typical of genuine reviews: 'customer'"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "suspicious_count": 1,
+    "suspicious_pct": 33.3,
+    "reliability_score": 78,
+    "reliability_label": "Not enough data",
+    "insights": [
+      "Fewer than 5 reviews analyzed (minimum 5 required for reliability label)."
+    ]
+  },
+  "processing_ms": 365.05
+}
+```
 
 ---
 

@@ -124,7 +124,7 @@ async function extractReviewsFromActiveTab() {
   }
 
   // 4. Invoke extractReviews() in the active tab context
-  let reviews = [];
+  let extraction = null;
   try {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -132,10 +132,10 @@ async function extractReviewsFromActiveTab() {
         if (typeof window.extractReviews === "function") {
           return window.extractReviews();
         }
-        return [];
+        return { reviews: [], seller_info: null };
       },
     });
-    reviews = (results && results[0] && results[0].result) || [];
+    extraction = (results && results[0] && results[0].result) || null;
   } catch (execErr) {
     console.error("[ReviewLens ServiceWorker] Extraction execution failed:", execErr);
     return {
@@ -145,11 +145,20 @@ async function extractReviewsFromActiveTab() {
     };
   }
 
+  const reviews = Array.isArray(extraction)
+    ? extraction
+    : (extraction && Array.isArray(extraction.reviews) ? extraction.reviews : []);
+  const sellerInfo = extraction && extraction.seller_info ? extraction.seller_info : null;
+
   console.log(`[ReviewLens ServiceWorker] Extracted reviews (${reviews.length}):`, reviews);
+  if (sellerInfo) {
+    console.log("[ReviewLens ServiceWorker] Extracted seller info:", sellerInfo);
+  }
 
   return {
     success: true,
     reviews: reviews,
+    seller_info: sellerInfo,
     url: url,
     reviewsCount: reviews.length,
   };
@@ -162,6 +171,7 @@ async function extractReviewsFromActiveTab() {
  */
 async function handleAnalyzeRequest(message) {
   let reviews = message && Array.isArray(message.reviews) ? message.reviews : null;
+  let sellerInfo = message && message.seller_info !== undefined ? message.seller_info : null;
   let pageUrl = message && message.url ? message.url : "";
 
   // If reviews were not passed directly, extract them now
@@ -171,6 +181,7 @@ async function handleAnalyzeRequest(message) {
       return extractResult;
     }
     reviews = extractResult.reviews;
+    sellerInfo = extractResult.seller_info || null;
     pageUrl = extractResult.url;
   }
 
@@ -189,6 +200,7 @@ async function handleAnalyzeRequest(message) {
   const payload = {
     page_url: pageUrl,
     reviews: reviews,
+    seller_info: sellerInfo,
   };
 
   let response;

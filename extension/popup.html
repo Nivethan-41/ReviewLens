@@ -67,7 +67,7 @@
       <section id="state-results" class="state-view hidden">
         <!-- Results Header / Action Bar -->
         <div class="results-header">
-          <span class="results-heading">Product Reliability</span>
+          <span class="results-heading">Product Genuineness</span>
           <button id="reanalyze-btn" class="btn-reanalyze" type="button" title="Clear cache and re-analyze page">
             <svg class="reanalyze-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="23 4 23 10 17 10"></polyline>
@@ -78,42 +78,110 @@
           </button>
         </div>
 
-        <!-- Summary Card -->
-        <div class="summary-card">
-          <div class="score-row">
-            <div class="score-display">
-              <span id="reliability-score" class="score-value">0</span>
-              <span class="score-denom">/ 100</span>
+        <!-- Volume Alert Banner (1b) -->
+        <div id="volume-risk-banner" class="volume-risk-banner hidden" role="alert">
+          <div class="volume-risk-icon-wrap">
+            <svg class="volume-risk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="volume-risk-body">
+            <span id="volume-risk-text" class="volume-risk-text">⚠️ Risky to Invest: Only 0 reviews found. Sample size too small for full confidence.</span>
+          </div>
+        </div>
+
+        <!-- Top Product Genuineness Card (1a) -->
+        <div class="summary-card genuineness-card">
+          <div class="genuineness-header-row">
+            <div class="genuineness-title-group">
+              <span class="genuineness-eyebrow">Overall Assessment</span>
+              <h2 id="genuineness-verdict" class="genuineness-verdict verdict-likely">Likely Genuine</h2>
             </div>
-            <div id="reliability-label-container">
-              <span id="reliability-label" class="badge">Moderate</span>
+            <div id="genuineness-badge-container">
+              <span id="genuineness-verdict-badge" class="verdict-pill pill-likely">Likely Genuine</span>
             </div>
           </div>
 
-          <!-- Gauge / Progress Bar -->
-          <div class="gauge-container">
-            <div class="gauge-track">
-              <div id="gauge-fill" class="gauge-fill" style="width: 0%;"></div>
+          <!-- Circular and Horizontal Score Gauge Display -->
+          <div class="gauge-display-container">
+            <div class="circular-gauge-box">
+              <svg class="circular-gauge-svg" viewBox="0 0 120 120" width="96" height="96">
+                <circle class="gauge-circle-bg" cx="60" cy="60" r="48" stroke-width="9" />
+                <circle id="genuineness-circle" class="gauge-circle-fill stroke-green" cx="60" cy="60" r="48" stroke-width="9" stroke-dasharray="301.59" stroke-dashoffset="0" />
+              </svg>
+              <div class="gauge-center-box">
+                <span id="product-genuineness-score" class="score-large">--</span>
+                <span class="score-pct">%</span>
+                <span class="score-subcaption">Score</span>
+              </div>
+            </div>
+
+            <div class="gauge-meta-panel">
+              <div class="verdict-explanation">
+                <div id="verdict-headline" class="verdict-headline">High Shopper Confidence</div>
+                <p id="verdict-description" class="verdict-description">Reviews demonstrate authentic linguistic traits, low spam indicators, and verified buyer media.</p>
+              </div>
+
+              <!-- Horizontal Progress Gauge Bar -->
+              <div class="gauge-container">
+                <div class="gauge-track">
+                  <div id="gauge-fill" class="gauge-fill gauge-green" style="width: 0%;"></div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Statistics Grid -->
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div id="stat-total" class="stat-number">0</div>
-              <div class="stat-label">Total Reviews</div>
+          <!-- Decision-Support Stats Grid (1c) -->
+          <div class="decision-stats-grid">
+            <div class="decision-stat-card">
+              <div class="decision-stat-header">
+                <svg class="decision-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span class="decision-stat-title">Media Verified</span>
+              </div>
+              <div id="stat-media-pct" class="decision-stat-val">0%</div>
+              <div id="stat-media-label" class="decision-stat-sub">0% reviews with photos/videos</div>
             </div>
-            <div class="stat-item">
-              <div id="stat-suspicious" class="stat-number">0</div>
-              <div class="stat-label">Suspicious</div>
+
+            <div class="decision-stat-card">
+              <div class="decision-stat-header">
+                <svg class="decision-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span class="decision-stat-title">Suspicious Rate</span>
+              </div>
+              <div id="stat-suspicious-pct" class="decision-stat-val">0%</div>
+              <div id="stat-suspicious-label" class="decision-stat-sub">0% flagged suspicious</div>
             </div>
-            <div class="stat-item">
-              <div id="stat-suspicious-pct" class="stat-number">0%</div>
-              <div class="stat-label">Suspicious %</div>
+
+            <div class="decision-stat-card">
+              <div class="decision-stat-header">
+                <svg class="decision-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span class="decision-stat-title">Seller Trust</span>
+              </div>
+              <div id="stat-seller-rating" class="decision-stat-val">--</div>
+              <div id="stat-seller-label" class="decision-stat-sub">Seller Rating: --/5.0</div>
             </div>
           </div>
 
-          <!-- Insights Section (up to 3) -->
+          <!-- Secondary legacy stats summary for compatibility -->
+          <div class="stats-overview-bar">
+            <span class="overview-item">Total: <strong id="stat-total">0</strong></span>
+            <span class="overview-sep">•</span>
+            <span class="overview-item">Suspicious: <strong id="stat-suspicious">0</strong></span>
+            <span class="overview-sep">•</span>
+            <span class="overview-item">Reliability: <strong id="reliability-score">0</strong>/100 (<span id="reliability-label">Moderate</span>)</span>
+          </div>
+
+          <!-- Key Insights Section (up to 3) -->
           <div id="insights-container" class="insights-container hidden">
             <h3 class="insights-heading">Key Insights</h3>
             <ul id="insights-list" class="insights-list"></ul>
@@ -123,12 +191,27 @@
         <!-- Reviews Section -->
         <div class="reviews-section">
           <div class="reviews-toolbar">
-            <span id="reviews-header-count" class="reviews-header-count">Reviews</span>
-            <!-- Filter Chips -->
+            <div class="reviews-toolbar-header">
+              <span id="reviews-header-count" class="reviews-header-count">Reviews</span>
+              <!-- Sort Toggle Control -->
+              <div class="sort-control">
+                <span class="sort-label">Sort:</span>
+                <button id="sort-toggle-btn" class="btn-sort" type="button" data-sort="suspicious" title="Toggle sorting order between suspicious-first and media-backed-first">
+                  <span id="sort-toggle-text">Suspicious First</span>
+                  <svg class="sort-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="7 15 12 20 17 15"></polyline>
+                    <polyline points="7 9 12 4 17 9"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter Chips (1c/2) -->
             <div class="filter-chips" role="tablist">
               <button class="chip active" type="button" data-filter="all">All</button>
+              <button class="chip" type="button" data-filter="media">With Photos/Videos</button>
               <button class="chip" type="button" data-filter="suspicious">Suspicious</button>
-              <button class="chip" type="button" data-filter="genuine">Genuine-looking</button>
+              <button class="chip" type="button" data-filter="genuine">Genuine</button>
             </div>
           </div>
 

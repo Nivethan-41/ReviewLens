@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indian E-Commerce Test Sandbox (Amazon.in, Flipkart, Meesho) | ReviewLens</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #212529;
+      background: #f1f3f6;
+      margin: 0;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .platform-section {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .platform-header {
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .platform-tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .tag-amazon { background: #ff9900; color: #111; }
+    .tag-flipkart { background: #2874f0; color: #fff; }
+    .tag-meesho { background: #9b27b0; color: #fff; }
+
+    /* Amazon simulated styles */
+    #merchant-info {
+      background: #f7fafa;
+      border: 1px solid #d5d9d9;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+    .review {
+      border-bottom: 1px solid #e7e7e7;
+      padding: 16px 0;
+    }
+    .review-image-tile-section {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .review-image-tile {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    /* Flipkart simulated styles */
+    #sellerName {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    ._27M-vq {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 16px 0;
+    }
+    ._3LWZlK {
+      display: inline-block;
+      background: #388e3c;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    ._2tNq8e {
+      display: flex;
+      gap: 8px;
+      margin: 8px 0;
+    }
+    ._3kidjx {
+      width: 68px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    /* Meesho simulated styles */
+    .SupplierCard {
+      background: #fcf4fc;
+      border: 1px solid #e1bee7;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .ReviewCard {
+      border-bottom: 1px solid #eee;
+      padding: 14px 0;
+    }
+    .review-image {
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Indian E-Commerce Extraction Test Suite</h1>
+    <p>Simulates real-world DOM structures from Amazon India (amazon.in), Flipkart (flipkart.com), and Meesho with customer photos, videos, verified purchase badges, and seller cards.</p>
+
+    <!-- SECTION 1: Amazon India Simulation -->
+    <section class="platform-section" id="amazon-sandbox">
+      <div class="platform-header">
+        <h2>Amazon.in Simulation: boAt Rockerz 450 Bluetooth On-Ear Headphones</h2>
+        <span class="platform-tag tag-amazon">Amazon India</span>
+      </div>
+
+      <!-- Amazon Seller Card -->
+      <div id="merchant-info" class="a-section a-spacing-mini">
+        <span class="a-size-small a-color-secondary">Sold by</span>
+        <a id="sellerProfileTriggerId" href="/seller/appario">Appario Retail Private Ltd</a>
+        <span class="a-size-small a-color-secondary">and Fulfilled by Amazon.</span>
+        <span class="seller-rating" data-hook="seller-rating">4.7 out of 5 stars (94% positive over last 12 months)</span>
+      </div>
+
+      <!-- Amazon Review 1: Verified Purchase with Customer Photos -->
+      <div data-hook="review" id="amz-review-1" class="a-section review aok-relative">
+        <div data-hook="genome-widget">
+          <span class="a-profile-name">Rahul Sharma</span>
+        </div>
+        <i data-hook="review-star-rating" class="a-icon a-icon-star a-star-5">
+          <span class="a-icon-alt">5.0 out of 5 stars</span>
+        </i>
+        <span data-hook="review-title" class="a-size-base a-text-bold">Excellent sound quality and fast delivery!</span>
+        <span data-hook="review-date" class="a-size-base a-color-secondary review-date">Reviewed in India on 2026-10-15</span>
+        <div>
+          <span data-hook="avp-badge" class="a-size-mini a-color-state a-text-bold">Verified Purchase</span>
+        </div>
+        <div data-hook="review-body" class="a-row a-spacing-small review-data">
+          <span>The bass is phenomenal for this price range. Battery lasts for more than 15 hours easily. Build quality feels sturdy.</span>
+        </div>
+        <div class="review-image-tile-section">
+          <img class="review-image-tile" data-hook="review-image-tile" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Customer Photo 1">
+          <img class="review-image-tile" data-hook="review-image-tile" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Customer Photo 2">
+        </div>
+      </div>
+
+      <!-- Amazon Review 2: Verified Purchase with Customer Video -->
+      <div data-hook="review" id="amz-review-2" class="a-section review aok-relative">
+        <div data-hook="genome-widget">
+          <span class="a-profile-name">Priya Patel</span>
+        </div>
+        <i data-hook="review-star-rating" class="a-icon a-icon-star a-star-4">
+          <span class="a-icon-alt">4.0 out of 5 stars</span>
+        </i>
+        <span data-hook="review-title" class="a-size-base a-text-bold">Good value for money headphone</span>
+        <span data-hook="review-date" class="a-size-base a-color-secondary review-date">Reviewed in India on 2026-10-18</span>
+        <div>
+          <span data-hook="avp-badge" class="a-size-mini a-color-state a-text-bold">Verified Purchase</span>
+        </div>
+        <div data-hook="review-body" class="a-row a-spacing-small review-data">
+          <span>Comfortable ear cushions for long listening sessions. Mic is decent for video calls. Attached unboxing clip.</span>
+        </div>
+        <div data-hook="review-video" class="cr-video-desktop">
+          <video src="dummy-video.mp4" controls width="200"></video>
+        </div>
+      </div>
+
+      <!-- Amazon Review 3: Text only, unverified, no media -->
+      <div data-hook="review" id="amz-review-3" class="a-section review aok-relative">
+        <div data-hook="genome-widget">
+          <span class="a-profile-name">Anand Verma</span>
+        </div>
+        <i data-hook="review-star-rating" class="a-icon a-icon-star a-star-2">
+          <span class="a-icon-alt">2.0 out of 5 stars</span>
+        </i>
+        <span data-hook="review-title" class="a-size-base a-text-bold">Average sound, ear cups are tight</span>
+        <span data-hook="review-date" class="a-size-base a-color-secondary review-date">Reviewed in India on 2026-10-20</span>
+        <div data-hook="review-body" class="a-row a-spacing-small review-data">
+          <span>Sound is mediocre. The ear cups pressed too hard against my ears after 30 minutes of usage. Not recommended.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Flipkart Simulation -->
+    <section class="platform-section" id="flipkart-sandbox">
+      <div class="platform-header">
+        <h2>Flipkart.com Simulation: Realme Wireless 3 Neckband</h2>
+        <span class="platform-tag tag-flipkart">Flipkart</span>
+      </div>
+
+      <!-- Flipkart Seller Card -->
+      <div id="sellerName">
+        <span class="_1RLviY">
+          <span>RetailNet</span>
+          <div class="_3LWZlK 1lRcqv">4.4 &#9733;</div>
+        </span>
+        <div class="_2d4LTz">7 Days Replacement Policy &bull; GST Invoice Available</div>
+      </div>
+
+      <!-- Flipkart Review 1: Certified Buyer with Customer Photos -->
+      <div class="_27M-vq" id="fk-review-1">
+        <div class="col _2wzgFH">
+          <div class="row">
+            <div class="_3LWZlK _1BLPMq">5 &#9733;</div>
+            <p class="_2-N8zT">Mind-blowing sound quality!</p>
+          </div>
+          <div class="row">
+            <div class="t-ZTKy">
+              <div>
+                <div class="">Just awesome sound output. Deep bass and crystal clear vocals. Highly recommended at this price point!</div>
+              </div>
+            </div>
+          </div>
+          <div class="row _2tNq8e">
+            <div class="_2103do">
+              <img class="_3kidjx" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Flipkart customer picture">
+            </div>
+          </div>
+          <div class="row _3n8e09">
+            <div class="_2V5RqD">Amit Kumar</div>
+            <div class="_2mcSum">
+              <span>Certified Buyer</span>
+            </div>
+            <p class="_2sc7ZR">2026-10-12</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flipkart Review 2: Certified Buyer with Video Thumbnail -->
+      <div class="_27M-vq" id="fk-review-2">
+        <div class="col _2wzgFH">
+          <div class="row">
+            <div class="_3LWZlK _1BLPMq">4 &#9733;</div>
+            <p class="_2-N8zT">Worth every rupee</p>
+          </div>
+          <div class="row">
+            <div class="t-ZTKy">
+              <div>
+                <div class="">Very good battery backup and seamless Bluetooth connectivity. Quick pairing with phone and laptop.</div>
+              </div>
+            </div>
+          </div>
+          <div class="row _2tNq8e">
+            <div class="_30kQv0 video-thumbnail">
+              <video src="fk-video.mp4" controls width="160"></video>
+            </div>
+          </div>
+          <div class="row _3n8e09">
+            <div class="_2V5RqD">Sneha Gupta</div>
+            <div class="_2mcSum">
+              <span>Certified Buyer</span>
+            </div>
+            <p class="_2sc7ZR">2026-10-14</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flipkart Review 3: Certified Buyer, Text only, no media -->
+      <div class="_27M-vq" id="fk-review-3">
+        <div class="col _2wzgFH">
+          <div class="row">
+            <div class="_3LWZlK _1BLPMq">1 &#9733;</div>
+            <p class="_2-N8zT">Defective unit received</p>
+          </div>
+          <div class="row">
+            <div class="t-ZTKy">
+              <div>
+                <div class="">Right earphone stopped working on the second day itself. Disappointed with the quality check.</div>
+              </div>
+            </div>
+          </div>
+          <div class="row _3n8e09">
+            <div class="_2V5RqD">Vikram Singh</div>
+            <div class="_2mcSum">
+              <span>Certified Buyer</span>
+            </div>
+            <p class="_2sc7ZR">2026-10-16</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: Meesho Simulation -->
+    <section class="platform-section" id="meesho-sandbox">
+      <div class="platform-header">
+        <h2>Meesho Simulation: Cotton Printed Kurti</h2>
+        <span class="platform-tag tag-meesho">Meesho</span>
+      </div>
+
+      <!-- Meesho Supplier Card -->
+      <div class="SupplierCard">
+        <div class="supplier-name">Surat Fashion Hub</div>
+        <span class="SupplierRating">4.2 &#9733;</span>
+      </div>
+
+      <!-- Meesho Review 1: with review-image -->
+      <div class="ReviewCard" id="msh-review-1">
+        <div class="RatingBadge">4.0 &#9733;</div>
+        <p class="ReviewText">Fabric quality is soft and comfortable. Perfect fit and color matches product photos exactly.</p>
+        <span class="ReviewDate">2026-10-10</span>
+        <span class="VerifiedBadge">Verified Purchase</span>
+        <div class="ReviewImages">
+          <img class="review-image" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Meesho customer image">
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

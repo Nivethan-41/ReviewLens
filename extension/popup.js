@@ -23,21 +23,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const errorMessage = document.getElementById("error-message");
   const errorHelp = document.getElementById("error-help");
 
-  // Summary Elements
+  // Volume Risk Banner
+  const volumeRiskBanner = document.getElementById("volume-risk-banner");
+  const volumeRiskText = document.getElementById("volume-risk-text");
+
+  // Top Product Genuineness Elements
+  const genuinenessVerdict = document.getElementById("genuineness-verdict");
+  const genuinenessVerdictBadge = document.getElementById("genuineness-verdict-badge");
+  const genuinenessCircle = document.getElementById("genuineness-circle");
+  const productGenuinenessScore = document.getElementById("product-genuineness-score");
+  const verdictHeadline = document.getElementById("verdict-headline");
+  const verdictDescription = document.getElementById("verdict-description");
+
+  // Decision-Support Stats Grid Elements
+  const statMediaPct = document.getElementById("stat-media-pct");
+  const statMediaLabel = document.getElementById("stat-media-label");
+  const statSuspiciousPct = document.getElementById("stat-suspicious-pct");
+  const statSuspiciousLabel = document.getElementById("stat-suspicious-label");
+  const statSellerRating = document.getElementById("stat-seller-rating");
+  const statSellerLabel = document.getElementById("stat-seller-label");
+
+  // Legacy Summary Elements (for backward compatibility)
   const reliabilityScore = document.getElementById("reliability-score");
   const reliabilityLabel = document.getElementById("reliability-label");
   const gaugeFill = document.getElementById("gauge-fill");
   const statTotal = document.getElementById("stat-total");
   const statSuspicious = document.getElementById("stat-suspicious");
-  const statSuspiciousPct = document.getElementById("stat-suspicious-pct");
   const insightsContainer = document.getElementById("insights-container");
   const insightsList = document.getElementById("insights-list");
 
-  // Reviews Elements
+  // Reviews Elements & Sorting Controls
   const reviewsHeaderCount = document.getElementById("reviews-header-count");
   const reviewsList = document.getElementById("reviews-list");
   const reviewsEmpty = document.getElementById("reviews-empty");
   const filterChips = document.querySelectorAll(".filter-chips .chip");
+  const sortToggleBtn = document.getElementById("sort-toggle-btn");
+  const sortToggleText = document.getElementById("sort-toggle-text");
   const footerVersion = document.getElementById("footer-version");
 
   // State Variables
@@ -45,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentAnalysisData = null;
   let currentReviews = [];
   let currentFilter = "all";
+  let currentSort = "suspicious"; // "suspicious" | "media"
 
   /**
    * Transition the UI to one of the 4 defined states.
@@ -241,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const reviews = extractRes.reviews || [];
+      const sellerInfo = extractRes.seller_info || null;
       if (reviews.length === 0) {
         showError("No Reviews Found", "No product reviews were detected on this page.");
         return;
@@ -254,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 3. Request analysis from FastAPI backend
       chrome.runtime.sendMessage(
-        { type: "ANALYZE", reviews: reviews, url: currentUrl },
+        { type: "ANALYZE", reviews: reviews, seller_info: sellerInfo, url: currentUrl },
         (analyzeRes) => {
           if (chrome.runtime.lastError) {
             showError(
@@ -303,9 +326,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * Render analysis summary and review cards safely using textContent.
+   * Render analysis summary, genuineness dashboard, volume alert, and review cards.
    * @param {object} data - API response payload matching PRD contract.
-   * @param {Array<object>} rawReviews - Raw extracted reviews with text.
+   * @param {Array<object>} rawReviews - Raw extracted reviews with media & verification metadata.
    */
   function renderResults(data, rawReviews) {
     if (!data || !data.summary) {
@@ -314,58 +337,153 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const { summary, results } = data;
-    const score = Math.round(summary.reliability_score ?? 0);
-    const label = summary.reliability_label || "Unknown";
 
-    // Build ID-to-Text map for safe text rendering
+    // Build ID-to-Review metadata map
     const reviewMap = new Map();
     if (Array.isArray(rawReviews)) {
       rawReviews.forEach((rev, idx) => {
-        if (rev && rev.id) reviewMap.set(rev.id, rev.text);
-        reviewMap.set(`idx_${idx}`, rev ? rev.text : "");
+        if (rev && rev.id) reviewMap.set(rev.id, rev);
+        reviewMap.set(`idx_${idx}`, rev || {});
       });
     }
 
-    // 1. Reliability Score
-    if (reliabilityScore) reliabilityScore.textContent = String(score);
+    // 1. Top Product Genuineness Score & Verdict (1a)
+    const genuinenessScore =
+      summary.product_genuineness_score != null
+        ? Math.round(summary.product_genuineness_score)
+        : Math.round(summary.reliability_score ?? 0);
+    const clampedScore = Math.max(0, Math.min(100, genuinenessScore));
 
-    // 2. Reliability Label Badge
-    if (reliabilityLabel) {
-      reliabilityLabel.textContent = label;
-      reliabilityLabel.className = "badge";
-      if (score >= 70) {
-        reliabilityLabel.classList.add("badge-high");
-      } else if (score >= 40) {
-        reliabilityLabel.classList.add("badge-moderate");
-      } else {
-        reliabilityLabel.classList.add("badge-low");
+    let verdict = "Likely Genuine";
+    let headlineText = "High Shopper Confidence";
+    let descText = "Reviews show authentic linguistic traits, low spam indicators, and verified buyer media.";
+    let themeClass = "likely";
+
+    if (clampedScore >= 70) {
+      verdict = "Likely Genuine";
+      headlineText = "High Shopper Confidence";
+      descText = "Reviews show authentic linguistic traits, low spam indicators, and verified buyer media.";
+      themeClass = "likely";
+    } else if (clampedScore >= 40) {
+      verdict = "Moderate Risk";
+      headlineText = "Moderate / Mixed Confidence";
+      descText = "Mixed credibility signals detected. Review patterns show moderate inconsistencies or mild rating skew.";
+      themeClass = "moderate";
+    } else {
+      verdict = "High Risk";
+      headlineText = "High Deception Risk";
+      descText = "Critical suspicious signals detected. Pattern anomalies, near-duplicates, or low seller trust indicate high risk.";
+      themeClass = "risky";
+    }
+
+    // Override if backend returned categorical label
+    if (summary.product_genuineness_label) {
+      const lbl = summary.product_genuineness_label;
+      if (lbl === "Likely Genuine") {
+        verdict = "Likely Genuine";
+      } else if (lbl === "Moderate / Mixed" || lbl === "Moderate Risk") {
+        verdict = "Moderate Risk";
+      } else if (lbl === "Potentially Deceptive / Risky" || lbl === "High Risk") {
+        verdict = "High Risk";
       }
     }
 
-    // 3. Colored Progress Gauge Bar
+    if (genuinenessVerdict) {
+      genuinenessVerdict.textContent = verdict;
+      genuinenessVerdict.className = `genuineness-verdict verdict-${themeClass}`;
+    }
+
+    if (genuinenessVerdictBadge) {
+      genuinenessVerdictBadge.textContent = verdict;
+      genuinenessVerdictBadge.className = `verdict-pill pill-${themeClass}`;
+    }
+
+    if (productGenuinenessScore) {
+      productGenuinenessScore.textContent = String(clampedScore);
+    }
+
+    if (verdictHeadline) verdictHeadline.textContent = headlineText;
+    if (verdictDescription) verdictDescription.textContent = descText;
+
+    // Update circular SVG gauge
+    if (genuinenessCircle) {
+      const circumference = 301.59; // 2 * PI * 48
+      const strokeOffset = circumference * (1 - clampedScore / 100);
+      genuinenessCircle.style.strokeDasharray = `${circumference}`;
+      genuinenessCircle.style.strokeDashoffset = `${strokeOffset}`;
+      const strokeColorClass =
+        themeClass === "likely" ? "stroke-green" : themeClass === "moderate" ? "stroke-amber" : "stroke-red";
+      genuinenessCircle.className = `gauge-circle-fill ${strokeColorClass}`;
+    }
+
+    // Update horizontal gauge fill
     if (gaugeFill) {
-      const clampedScore = Math.max(0, Math.min(100, score));
       gaugeFill.style.width = `${clampedScore}%`;
       gaugeFill.className = "gauge-fill";
-      if (score >= 70) {
+      if (themeClass === "likely") {
         gaugeFill.classList.add("gauge-green");
-      } else if (score >= 40) {
+      } else if (themeClass === "moderate") {
         gaugeFill.classList.add("gauge-amber");
       } else {
         gaugeFill.classList.add("gauge-red");
       }
     }
 
-    // 4. Statistics
-    if (statTotal) statTotal.textContent = String(summary.total || 0);
-    if (statSuspicious) statSuspicious.textContent = String(summary.suspicious_count || 0);
-    if (statSuspiciousPct) {
-      statSuspiciousPct.textContent = `${Math.round(summary.suspicious_pct || 0)}%`;
+    // 2. Volume Alert Banner (1b)
+    const totalCount = summary.total ?? (Array.isArray(rawReviews) ? rawReviews.length : 0);
+    const volumeRisk = summary.volume_risk;
+    if (volumeRisk && volumeRisk.is_risky) {
+      if (volumeRiskBanner) {
+        volumeRiskBanner.classList.remove("hidden");
+        if (volumeRisk.level === "High") {
+          volumeRiskBanner.className = "volume-risk-banner volume-risk-high";
+        } else {
+          volumeRiskBanner.className = "volume-risk-banner volume-risk-moderate";
+        }
+      }
+      if (volumeRiskText) {
+        volumeRiskText.textContent = `⚠️ Risky to Invest: Only ${totalCount} reviews found. Sample size too small for full confidence.`;
+      }
+    } else {
+      if (volumeRiskBanner) volumeRiskBanner.classList.add("hidden");
     }
 
-    // 5. Key Insights (up to 3)
+    // 3. Decision-Support Stats Grid (1c)
+    // Media Verified: "X% reviews with photos/videos"
+    const mediaPct = Math.round(summary.media_review_pct ?? 0);
+    if (statMediaPct) statMediaPct.textContent = `${mediaPct}%`;
+    if (statMediaLabel) statMediaLabel.textContent = `${mediaPct}% reviews with photos/videos`;
+
+    // Suspicious Rate: "X% flagged suspicious"
+    const suspPct = Math.round(summary.suspicious_pct ?? 0);
+    if (statSuspiciousPct) statSuspiciousPct.textContent = `${suspPct}%`;
+    if (statSuspiciousLabel) statSuspiciousLabel.textContent = `${suspPct}% flagged suspicious`;
+
+    // Seller Trust: "Seller Rating: X/5.0"
+    if (summary.seller_confidence != null) {
+      const sRating = (summary.seller_confidence / 20.0).toFixed(1);
+      if (statSellerRating) statSellerRating.textContent = `${sRating}/5.0`;
+      if (statSellerLabel) statSellerLabel.textContent = `Seller Rating: ${sRating}/5.0`;
+    } else {
+      if (statSellerRating) statSellerRating.textContent = "N/A";
+      if (statSellerLabel) statSellerLabel.textContent = "Seller Rating: Not available";
+    }
+
+    // Legacy summary elements
+    if (statTotal) statTotal.textContent = String(totalCount);
+    if (statSuspicious) statSuspicious.textContent = String(summary.suspicious_count || 0);
+    if (reliabilityScore) reliabilityScore.textContent = String(Math.round(summary.reliability_score ?? 0));
+    if (reliabilityLabel) {
+      reliabilityLabel.textContent = summary.reliability_label || "Moderate";
+      reliabilityLabel.className = "badge";
+      if (clampedScore >= 70) reliabilityLabel.classList.add("badge-high");
+      else if (clampedScore >= 40) reliabilityLabel.classList.add("badge-moderate");
+      else reliabilityLabel.classList.add("badge-low");
+    }
+
+    // 4. Key Insights Section (up to 3)
     if (insightsContainer && insightsList) {
-      insightsList.replaceChildren(); // Clear existing insights
+      insightsList.replaceChildren();
       const insights = Array.isArray(summary.insights) ? summary.insights.slice(0, 3) : [];
       if (insights.length > 0) {
         insights.forEach((ins) => {
@@ -379,32 +497,49 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // 6. Reviews List
+    // 5. Render Reviews List
     renderReviewsList(results || [], reviewMap);
   }
 
   /**
    * Sort and filter reviews, then render list items safely via textContent.
    * @param {Array<object>} results - API results list.
-   * @param {Map<string, string>} reviewMap - Map of review IDs to raw text.
+   * @param {Map<string, object>} reviewMap - Map of review IDs to raw review metadata.
    */
   function renderReviewsList(results, reviewMap) {
     if (!reviewsList) return;
-    reviewsList.replaceChildren(); // Clear existing items
+    reviewsList.replaceChildren();
 
-    // Sort suspicious first by confidence descending
+    // Sort according to currentSort toggle: "suspicious" vs "media"
     const sorted = [...results].sort((a, b) => {
-      const isSuspA = a.label === "suspicious" ? 1 : 0;
-      const isSuspB = b.label === "suspicious" ? 1 : 0;
-      if (isSuspA !== isSuspB) {
-        return isSuspB - isSuspA; // Suspicious (1) before others (0)
+      const metaA = reviewMap.get(a.id) || {};
+      const metaB = reviewMap.get(b.id) || {};
+      const hasMediaA = Boolean(metaA.has_images || metaA.has_video);
+      const hasMediaB = Boolean(metaB.has_images || metaB.has_video);
+
+      if (currentSort === "media") {
+        const mScoreA = hasMediaA ? 1 : 0;
+        const mScoreB = hasMediaB ? 1 : 0;
+        if (mScoreA !== mScoreB) {
+          return mScoreB - mScoreA; // Media-backed reviews first
+        }
+        return (b.confidence || 0) - (a.confidence || 0);
+      } else {
+        // Suspicious first
+        const isSuspA = a.label === "suspicious" ? 1 : 0;
+        const isSuspB = b.label === "suspicious" ? 1 : 0;
+        if (isSuspA !== isSuspB) {
+          return isSuspB - isSuspA; // Suspicious (1) before others (0)
+        }
+        return (b.confidence || 0) - (a.confidence || 0);
       }
-      return (b.confidence || 0) - (a.confidence || 0);
     });
 
-    // Apply Filter Chips: 'all' | 'suspicious' | 'genuine'
+    // Apply Filter Chips: 'all' | 'media' | 'suspicious' | 'genuine'
     const filtered = sorted.filter((r) => {
+      const meta = reviewMap.get(r.id) || {};
       if (currentFilter === "all") return true;
+      if (currentFilter === "media") return Boolean(meta.has_images || meta.has_video);
       if (currentFilter === "suspicious") return r.label === "suspicious";
       if (currentFilter === "genuine") return r.label === "genuine";
       return true;
@@ -418,7 +553,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Empty Filter State
     if (reviewsEmpty) {
       if (filtered.length === 0) {
-        reviewsEmpty.textContent = `No ${currentFilter === "suspicious" ? "suspicious" : currentFilter === "genuine" ? "genuine-looking" : ""} reviews found.`;
+        let filterDesc = "";
+        if (currentFilter === "suspicious") filterDesc = "suspicious ";
+        else if (currentFilter === "genuine") filterDesc = "genuine ";
+        else if (currentFilter === "media") filterDesc = "photo/video ";
+        reviewsEmpty.textContent = `No ${filterDesc}reviews match the selected filter.`;
         reviewsEmpty.classList.remove("hidden");
       } else {
         reviewsEmpty.classList.add("hidden");
@@ -433,13 +572,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const labelType = r.label || "uncertain";
       item.classList.add(`review-${labelType}`);
 
-      // Header: Badge + Confidence
+      const meta = reviewMap.get(r.id) || reviewMap.get(`idx_${idx}`) || {};
+      const hasMedia = Boolean(meta.has_images || meta.has_video);
+      const isVerified = Boolean(meta.verified_purchase);
+
+      // Header: Badge Group + Confidence
       const header = document.createElement("div");
       header.className = "review-item-header";
 
+      const badgeGroup = document.createElement("div");
+      badgeGroup.className = "review-badge-group";
+
+      // 1. Classification Badge
       const badge = document.createElement("span");
       badge.className = "badge";
-
       if (labelType === "suspicious") {
         badge.classList.add("badge-suspicious");
         badge.textContent = "Suspicious";
@@ -450,21 +596,86 @@ document.addEventListener("DOMContentLoaded", () => {
         badge.classList.add("badge-uncertain");
         badge.textContent = "Uncertain";
       }
+      badgeGroup.appendChild(badge);
+
+      // 2. Camera icon / Media Badge (1d)
+      if (hasMedia) {
+        const mediaBadge = document.createElement("span");
+        mediaBadge.className = "badge badge-media";
+
+        const camSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        camSvg.setAttribute("class", "badge-inline-icon");
+        camSvg.setAttribute("viewBox", "0 0 24 24");
+        camSvg.setAttribute("fill", "none");
+        camSvg.setAttribute("stroke", "currentColor");
+        camSvg.setAttribute("stroke-width", "2");
+        camSvg.setAttribute("stroke-linecap", "round");
+        camSvg.setAttribute("stroke-linejoin", "round");
+        const camPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        camPath.setAttribute("d", "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z");
+        const camCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        camCircle.setAttribute("cx", "12");
+        camCircle.setAttribute("cy", "13");
+        camCircle.setAttribute("r", "4");
+        camSvg.appendChild(camPath);
+        camSvg.appendChild(camCircle);
+        mediaBadge.appendChild(camSvg);
+
+        const mediaLabelText = document.createTextNode(meta.has_video ? " Video" : " Photo");
+        mediaBadge.appendChild(mediaLabelText);
+        badgeGroup.appendChild(mediaBadge);
+      }
+
+      // 3. Verified Purchase Tag (1d)
+      if (isVerified) {
+        const verifiedBadge = document.createElement("span");
+        verifiedBadge.className = "badge badge-verified";
+        verifiedBadge.textContent = "✓ Verified Purchase";
+        badgeGroup.appendChild(verifiedBadge);
+      }
+
+      header.appendChild(badgeGroup);
 
       const confSpan = document.createElement("span");
       confSpan.className = "confidence-val";
       const confPct = Math.round((r.confidence || 0) * 100);
       confSpan.textContent = `${confPct}% confidence`;
-
-      header.appendChild(badge);
       header.appendChild(confSpan);
+
       item.appendChild(header);
+
+      // 4. Highlight why media-backed reviews are more reliable (1d)
+      if (hasMedia) {
+        const mediaHighlight = document.createElement("div");
+        mediaHighlight.className = "media-trust-highlight";
+
+        const highlightIcon = document.createElement("span");
+        highlightIcon.className = "highlight-icon";
+        highlightIcon.textContent = "📷";
+
+        const highlightBody = document.createElement("div");
+        highlightBody.className = "highlight-body";
+
+        const highlightBold = document.createElement("strong");
+        highlightBold.textContent = "Media Verified: ";
+
+        const highlightDesc = document.createTextNode(
+          "Customer photo/video evidence physically validates receipt. Media-backed reviews receive higher authenticity weight in the reliability model."
+        );
+
+        highlightBody.appendChild(highlightBold);
+        highlightBody.appendChild(highlightDesc);
+        mediaHighlight.appendChild(highlightIcon);
+        mediaHighlight.appendChild(highlightBody);
+
+        item.appendChild(mediaHighlight);
+      }
 
       // Snippet: First 120 characters rendered strictly via textContent
       const snippetEl = document.createElement("p");
       snippetEl.className = "review-snippet";
 
-      const rawText = (reviewMap.get(r.id) || reviewMap.get(`idx_${idx}`) || r.text || "").trim();
+      const rawText = (meta.text || r.text || "").trim();
       let snippet = rawText;
       if (snippet.length > 120) {
         snippet = `${snippet.substring(0, 120)}…`;
@@ -538,7 +749,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Filter Chips Click Listeners
+  // Sort Toggle Click Listener (2)
+  if (sortToggleBtn) {
+    sortToggleBtn.addEventListener("click", () => {
+      if (currentSort === "suspicious") {
+        currentSort = "media";
+        if (sortToggleText) sortToggleText.textContent = "Media First";
+        sortToggleBtn.setAttribute("data-sort", "media");
+      } else {
+        currentSort = "suspicious";
+        if (sortToggleText) sortToggleText.textContent = "Suspicious First";
+        sortToggleBtn.setAttribute("data-sort", "suspicious");
+      }
+
+      if (currentAnalysisData && currentAnalysisData.results) {
+        const reviewMap = new Map();
+        if (Array.isArray(currentReviews)) {
+          currentReviews.forEach((rev, idx) => {
+            if (rev && rev.id) reviewMap.set(rev.id, rev);
+            reviewMap.set(`idx_${idx}`, rev || {});
+          });
+        }
+        renderReviewsList(currentAnalysisData.results, reviewMap);
+      }
+    });
+  }
+
+  // Filter Chips Click Listeners (2)
   filterChips.forEach((chip) => {
     chip.addEventListener("click", () => {
       filterChips.forEach((c) => c.classList.remove("active"));
@@ -549,8 +786,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const reviewMap = new Map();
         if (Array.isArray(currentReviews)) {
           currentReviews.forEach((rev, idx) => {
-            if (rev && rev.id) reviewMap.set(rev.id, rev.text);
-            reviewMap.set(`idx_${idx}`, rev ? rev.text : "");
+            if (rev && rev.id) reviewMap.set(rev.id, rev);
+            reviewMap.set(`idx_${idx}`, rev || {});
           });
         }
         renderReviewsList(currentAnalysisData.results, reviewMap);

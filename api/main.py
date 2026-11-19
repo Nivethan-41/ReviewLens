@@ -162,6 +162,7 @@ def analyze_reviews(payload: AnalyzeRequest, request: Request) -> AnalyzeRespons
                 "date": rev.date,
                 "has_images": getattr(rev, "has_images", False),
                 "has_video": getattr(rev, "has_video", False),
+                "verified_purchase": getattr(rev, "verified_purchase", False),
             }
             for rev in payload.reviews
         ]

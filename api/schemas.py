@@ -43,6 +43,10 @@ class ReviewIn(BaseModel):
         default=False,
         description="Optional flag indicating whether review includes customer video.",
     )
+    verified_purchase: Optional[bool] = Field(
+        default=False,
+        description="Optional flag indicating whether review is from a verified/certified buyer.",
+    )
 
     @field_validator("text")
     @classmethod

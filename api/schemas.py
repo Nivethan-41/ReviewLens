@@ -8,7 +8,7 @@ and service health check payloads.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -34,6 +34,14 @@ class ReviewIn(BaseModel):
     date: Optional[str] = Field(
         default=None,
         description="Optional ISO 8601 date string when review was posted (e.g. '2026-10-01').",
+    )
+    has_images: Optional[bool] = Field(
+        default=False,
+        description="Optional flag indicating whether review includes customer photos.",
+    )
+    has_video: Optional[bool] = Field(
+        default=False,
+        description="Optional flag indicating whether review includes customer video.",
     )
 
     @field_validator("text")
@@ -95,6 +103,10 @@ class AnalyzeRequest(BaseModel):
         max_length=200,
         description="List of 1 to 200 product reviews to analyze.",
     )
+    seller_info: Optional[Any] = Field(
+        default=None,
+        description="Optional seller rating out of 5 or seller metadata dict.",
+    )
 
 
 class ReasonOut(BaseModel):
@@ -102,7 +114,7 @@ class ReasonOut(BaseModel):
 
     type: str = Field(
         ...,
-        description="Category of indicator: 'language', 'style', or 'pattern'.",
+        description="Category of indicator: 'language', 'style', 'pattern', or 'media'.",
     )
     text: str = Field(
         ...,
@@ -165,6 +177,30 @@ class Summary(BaseModel):
     insights: List[str] = Field(
         default_factory=list,
         description="List of human-readable insights explaining the reliability score.",
+    )
+    product_genuineness_score: Optional[float] = Field(
+        default=None,
+        description="Product genuineness score from 0 to 100.",
+    )
+    product_genuineness_label: Optional[str] = Field(
+        default=None,
+        description="Categorical genuineness grade: 'Likely Genuine', 'Moderate / Mixed', or 'Potentially Deceptive / Risky'.",
+    )
+    media_review_count: Optional[int] = Field(
+        default=0,
+        description="Count of reviews with attached customer images or video.",
+    )
+    media_review_pct: Optional[float] = Field(
+        default=0.0,
+        description="Percentage of reviews with attached customer images or video.",
+    )
+    volume_risk: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Review volume risk assessment dictionary.",
+    )
+    seller_confidence: Optional[float] = Field(
+        default=None,
+        description="Seller confidence score (0-100) if seller information was provided.",
     )
 
 

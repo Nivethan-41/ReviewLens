@@ -20,8 +20,33 @@ console.log("[ReviewLens ServiceWorker] Initialized with API_BASE_URL:", API_BAS
  * Handle incoming runtime messages from the popup or other extension components.
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message && message.type === "ANALYZE") {
-    handleAnalyzeRequest()
+  if (!message || !message.type) return;
+
+  if (message.type === "HEALTH") {
+    handleHealthRequest()
+      .then((res) => sendResponse(res))
+      .catch((err) => {
+        sendResponse({ success: false, error: err.message || "Health check failed." });
+      });
+    return true;
+  }
+
+  if (message.type === "EXTRACT") {
+    extractReviewsFromActiveTab()
+      .then((res) => sendResponse(res))
+      .catch((err) => {
+        console.error("[ReviewLens ServiceWorker] Extraction error:", err);
+        sendResponse({
+          success: false,
+          error: "INTERNAL_ERROR",
+          message: err.message || "Failed to extract reviews from active tab.",
+        });
+      });
+    return true;
+  }
+
+  if (message.type === "ANALYZE") {
+    handleAnalyzeRequest(message)
       .then((response) => sendResponse(response))
       .catch((err) => {
         console.error("[ReviewLens ServiceWorker] Unexpected error:", err);
@@ -36,10 +61,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Coordinate review extraction from the active tab and analyze via FastAPI backend.
- * @returns {Promise<object>} Status and analysis result payload.
+ * Perform health check against FastAPI backend.
+ * @returns {Promise<object>} Status and health payload.
  */
-async function handleAnalyzeRequest() {
+async function handleHealthRequest() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/health`);
+    if (!res.ok) {
+      return { success: false, status: res.status, error: `Health check failed with status ${res.status}` };
+    }
+    const data = await res.json();
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err.message || "Server offline" };
+  }
+}
+
+/**
+ * Extract reviews from the active browser tab.
+ * @returns {Promise<object>} Extracted reviews array and page URL.
+ */
+async function extractReviewsFromActiveTab() {
   // 1. Retrieve the current active tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !tab.id) {
@@ -103,10 +145,36 @@ async function handleAnalyzeRequest() {
     };
   }
 
-  // Log extracted reviews to service worker console (satisfies verification requirement)
   console.log(`[ReviewLens ServiceWorker] Extracted reviews (${reviews.length}):`, reviews);
 
-  // 5. Handle empty reviews error condition
+  return {
+    success: true,
+    reviews: reviews,
+    url: url,
+    reviewsCount: reviews.length,
+  };
+}
+
+/**
+ * Coordinate review extraction and analysis via FastAPI backend.
+ * @param {object} message - Incoming message payload (may contain pre-extracted reviews).
+ * @returns {Promise<object>} Status and analysis result payload.
+ */
+async function handleAnalyzeRequest(message) {
+  let reviews = message && Array.isArray(message.reviews) ? message.reviews : null;
+  let pageUrl = message && message.url ? message.url : "";
+
+  // If reviews were not passed directly, extract them now
+  if (!reviews) {
+    const extractResult = await extractReviewsFromActiveTab();
+    if (!extractResult.success) {
+      return extractResult;
+    }
+    reviews = extractResult.reviews;
+    pageUrl = extractResult.url;
+  }
+
+  // Handle empty reviews error condition
   if (!reviews || reviews.length === 0) {
     return {
       success: false,
@@ -116,10 +184,10 @@ async function handleAnalyzeRequest() {
     };
   }
 
-  // 6. Send payload to FastAPI backend POST /analyze
+  // Send payload to FastAPI backend POST /analyze
   const endpoint = `${API_BASE_URL}/analyze`;
   const payload = {
-    page_url: url,
+    page_url: pageUrl,
     reviews: reviews,
   };
 
@@ -137,12 +205,12 @@ async function handleAnalyzeRequest() {
     return {
       success: false,
       error: "SERVER_OFFLINE",
-      message: `Backend server is offline at ${API_BASE_URL}. Ensure FastAPI is running via 'make serve' or 'uvicorn api.main:app --reload'.`,
+      message: "Start the ReviewLens server: make serve",
       reviewsCount: reviews.length,
     };
   }
 
-  // 7. Handle non-200 HTTP errors from backend
+  // Handle non-200 HTTP errors from backend
   if (!response.ok) {
     let errorDetail = "";
     try {
@@ -161,12 +229,13 @@ async function handleAnalyzeRequest() {
     };
   }
 
-  // 8. Return successful analysis payload to popup
+  // Return successful analysis payload to popup
   const data = await response.json();
   console.log("[ReviewLens ServiceWorker] Analysis succeeded:", data);
   return {
     success: true,
     reviewsCount: reviews.length,
     data: data,
+    reviews: reviews,
   };
 }

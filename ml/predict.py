@@ -91,12 +91,50 @@ DEMO_REVIEWS: list[dict[str, Any]] = [
 ]
 
 
+def sort_for_user_inspection(
+    results: list[dict[str, Any]],
+    reviews: Optional[list[dict[str, Any]]] = None,
+) -> list[dict[str, Any]]:
+    """Sort review results for user inspection, prioritizing media-rich reviews.
+
+    Media-rich reviews (with customer images or video) appear first, followed by text-only
+    reviews. Within each group, suspicious reviews appear first, ordered by confidence descending.
+
+    Args:
+        results: List of prediction result dictionaries.
+        reviews: Optional list of review dictionaries to check for media presence.
+
+    Returns:
+        New sorted list of result dictionaries.
+    """
+    media_ids: set[str] = set()
+    if reviews:
+        for r in reviews:
+            if bool(r.get("has_images") or r.get("has_video")):
+                media_ids.add(str(r.get("id", "")))
+
+    def _sort_key(item: dict[str, Any]) -> tuple[int, int, float]:
+        item_id = str(item.get("id", ""))
+        has_media = item_id in media_ids or any(
+            isinstance(rsn, dict) and rsn.get("type") == "media"
+            for rsn in item.get("reasons", [])
+        )
+        is_suspicious = 1 if item.get("label") == "suspicious" else 0
+        conf = float(item.get("confidence", 0.0))
+        return (1 if has_media else 0, is_suspicious, conf)
+
+    return sorted(results, key=_sort_key, reverse=True)
+
+
 class ModelService:
     """Thread-safe inference service for ReviewLens.
 
     Loads the trained model bundle artifact once upon instantiation and exposes
     the `analyze()` method for evaluating sets of reviews.
     """
+
+    sort_for_inspection = staticmethod(sort_for_user_inspection)
+    sort_for_user_inspection = staticmethod(sort_for_user_inspection)
 
     def __init__(self, model_path: Path | str = MODEL_PATH) -> None:
         """Initialize ModelService and load the trained pipeline artifact.
@@ -123,7 +161,12 @@ class ModelService:
 
         self._lock = threading.Lock()
 
-    def analyze(self, reviews: list[dict[str, Any]]) -> dict[str, Any]:
+    def analyze(
+        self,
+        reviews: list[dict[str, Any]],
+        seller_info: Optional[Any] = None,
+        sort_for_inspection: bool = False,
+    ) -> dict[str, Any]:
         """Analyze a collection of reviews and produce prediction results with summary.
 
         Validates input reviews, generates missing IDs, truncates overly long texts,
@@ -133,7 +176,9 @@ class ModelService:
 
         Args:
             reviews: List of review dictionaries containing 'text', and optional 'id',
-                     'rating', and 'date'.
+                     'rating', 'date', 'has_images', and 'has_video'.
+            seller_info: Optional seller information or rating out of 5 for seller confidence.
+            sort_for_inspection: If True, prioritizes media-rich reviews in results ordering.
 
         Returns:
             Dictionary matching API contract:
@@ -152,7 +197,13 @@ class ModelService:
                     "suspicious_pct": float,
                     "reliability_score": int,
                     "reliability_label": str,
-                    "insights": list[str]
+                    "insights": list[str],
+                    "product_genuineness_score": float,
+                    "product_genuineness_label": str,
+                    "media_review_count": int,
+                    "media_review_pct": float,
+                    "volume_risk": dict,
+                    "seller_confidence": Optional[float]
                 }
             }
 
@@ -169,7 +220,7 @@ class ModelService:
             )
 
         if not reviews:
-            reliability = compute_reliability([], [])
+            reliability = compute_reliability([], [], seller_info=seller_info)
             return {
                 "results": [],
                 "summary": {
@@ -179,6 +230,12 @@ class ModelService:
                     "reliability_score": reliability["reliability_score"],
                     "reliability_label": reliability["reliability_label"],
                     "insights": reliability["insights"],
+                    "product_genuineness_score": reliability["product_genuineness_score"],
+                    "product_genuineness_label": reliability["product_genuineness_label"],
+                    "media_review_count": reliability["media_review_count"],
+                    "media_review_pct": reliability["media_review_pct"],
+                    "volume_risk": reliability["volume_risk"],
+                    "seller_confidence": reliability["seller_confidence"],
                 },
             }
 
@@ -204,6 +261,8 @@ class ModelService:
             cleaned_item = dict(rev)
             cleaned_item["id"] = review_id
             cleaned_item["text"] = clean_text
+            cleaned_item["has_images"] = bool(rev.get("has_images", False))
+            cleaned_item["has_video"] = bool(rev.get("has_video", False))
             cleaned_reviews.append(cleaned_item)
 
         # Batch prediction with thread safety
@@ -227,7 +286,13 @@ class ModelService:
             )
 
             with self._lock:
-                raw_reasons = explain_review(cleaned_item["text"], self.pipeline, top_k=3)
+                raw_reasons = explain_review(
+                    cleaned_item["text"],
+                    self.pipeline,
+                    top_k=3,
+                    has_images=cleaned_item["has_images"],
+                    has_video=cleaned_item["has_video"],
+                )
 
             reasons = [{"type": reas["type"], "text": reas["text"]} for reas in raw_reasons]
 
@@ -242,7 +307,7 @@ class ModelService:
         suspicious_count = sum(1 for res in results if res["label"] == "suspicious")
         suspicious_pct = round((suspicious_count / float(total)) * 100.0, 1) if total > 0 else 0.0
 
-        reliability = compute_reliability(cleaned_reviews, results)
+        reliability = compute_reliability(cleaned_reviews, results, seller_info=seller_info)
 
         summary = {
             "total": total,
@@ -251,7 +316,16 @@ class ModelService:
             "reliability_score": reliability["reliability_score"],
             "reliability_label": reliability["reliability_label"],
             "insights": reliability["insights"],
+            "product_genuineness_score": reliability["product_genuineness_score"],
+            "product_genuineness_label": reliability["product_genuineness_label"],
+            "media_review_count": reliability["media_review_count"],
+            "media_review_pct": reliability["media_review_pct"],
+            "volume_risk": reliability["volume_risk"],
+            "seller_confidence": reliability["seller_confidence"],
         }
+
+        if sort_for_inspection:
+            results = sort_for_user_inspection(results, cleaned_reviews)
 
         return {
             "results": results,

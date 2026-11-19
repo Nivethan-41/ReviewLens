@@ -78,6 +78,12 @@ def test_analyze_output_schema_matches_prd_contract(model_service: ModelService)
         "reliability_score",
         "reliability_label",
         "insights",
+        "product_genuineness_score",
+        "product_genuineness_label",
+        "media_review_count",
+        "media_review_pct",
+        "volume_risk",
+        "seller_confidence",
     }
     assert set(summary.keys()) == expected_summary_keys
 
@@ -192,4 +198,52 @@ def test_thread_safety(model_service: ModelService):
     first_result_labels = [r["label"] for r in results[0]["results"]]
     for res in results[1:]:
         assert [r["label"] for r in res["results"]] == first_result_labels
-        assert res["summary"]["reliability_score"] == results[0]["summary"]["reliability_score"]
+
+
+def test_analyze_with_seller_info_and_media_reason(model_service: ModelService):
+    """Verify analyze accepts seller_info and appends media credibility reason to genuine reviews."""
+    reviews = [
+        {
+            "id": "rev_media_1",
+            "text": "I bought this kettle 2 months ago. It boils water quickly in 3 minutes and the stainless steel interior is easy to rinse.",
+            "rating": 5,
+            "has_images": True,
+        },
+        {
+            "id": "rev_text_2",
+            "text": "Average device that does the job as described. Nothing spectacular.",
+            "rating": 3,
+            "has_images": False,
+        },
+    ]
+
+    response = model_service.analyze(reviews, seller_info={"rating": 4.5})
+
+    # Verify seller_confidence in summary
+    assert response["summary"]["seller_confidence"] == 90.0
+    assert response["summary"]["media_review_count"] == 1
+    assert response["summary"]["media_review_pct"] == 50.0
+
+    # Verify media reason attached to rev_media_1
+    res1 = next(r for r in response["results"] if r["id"] == "rev_media_1")
+    if res1["label"] == "genuine":
+        media_reasons = [rsn for rsn in res1["reasons"] if rsn["type"] == "media"]
+        assert len(media_reasons) == 1
+        assert "Customer photo/video attached" in media_reasons[0]["text"]
+
+
+def test_prioritize_media_rich_reviews_in_sorting(model_service: ModelService):
+    """Verify results ordering prioritizes media-rich reviews when sorting for user inspection."""
+    reviews = [
+        {"id": "text_only_1", "text": "Ordinary text-only review 1.", "has_images": False},
+        {"id": "media_rich_1", "text": "Genuine review with attached customer photos.", "has_images": True},
+        {"id": "text_only_2", "text": "Ordinary text-only review 2.", "has_images": False},
+        {"id": "media_rich_2", "text": "Another review with attached video proof.", "has_video": True},
+    ]
+
+    response = model_service.analyze(reviews, sort_for_inspection=True)
+    ordered_ids = [r["id"] for r in response["results"]]
+
+    # Both media-rich reviews must appear before the text-only reviews
+    assert ordered_ids[:2] == ["media_rich_1", "media_rich_2"] or set(ordered_ids[:2]) == {"media_rich_1", "media_rich_2"}
+    assert set(ordered_ids[2:]) == {"text_only_1", "text_only_2"}

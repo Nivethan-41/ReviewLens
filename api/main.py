@@ -160,10 +160,12 @@ def analyze_reviews(payload: AnalyzeRequest, request: Request) -> AnalyzeRespons
                 "text": rev.text,
                 "rating": rev.rating,
                 "date": rev.date,
+                "has_images": getattr(rev, "has_images", False),
+                "has_video": getattr(rev, "has_video", False),
             }
             for rev in payload.reviews
         ]
-        result = service.analyze(raw_reviews)
+        result = service.analyze(raw_reviews, seller_info=getattr(payload, "seller_info", None))
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY

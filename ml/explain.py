@@ -417,6 +417,8 @@ def explain_review(
     text: str,
     model_bundle: Any,
     top_k: int = 3,
+    has_images: bool = False,
+    has_video: bool = False,
 ) -> list[dict[str, Any]]:
     """Explain prediction for a review text by identifying language and style signals.
 
@@ -426,6 +428,8 @@ def explain_review(
        into a human-readable sentence.
     2. Style reasons: compares the review's stylometric values with the genuine-class
        mean and std from training (z-score above 1.5), then applies plain English templates.
+    3. Media reasons: if images or video are attached to a genuine review, appends a positive
+       credibility rationale.
 
     Always returns at least one reason; if nothing stands out, returns
     'No strong deceptive signals found' for genuine-looking reviews.
@@ -438,10 +442,12 @@ def explain_review(
         model_bundle: Trained Pipeline or dictionary bundle containing pipeline,
             stylometric_stats, and optional surrogate_model.
         top_k: Maximum number of reasons to return. Defaults to 3.
+        has_images: Whether review includes customer photos. Defaults to False.
+        has_video: Whether review includes customer video. Defaults to False.
 
     Returns:
         List of reason dictionaries:
-        [{'type': 'language' | 'style' | 'pattern', 'text': str, 'weight': float}]
+        [{'type': 'language' | 'style' | 'pattern' | 'media', 'text': str, 'weight': float}]
     """
     # 1. Unpack bundle
     pipeline: Pipeline
@@ -546,13 +552,27 @@ def explain_review(
 
     # Sort descending by weight
     sanitized_reasons.sort(key=lambda r: abs(r["weight"]), reverse=True)
-    return sanitized_reasons[:top_k]
+    final_reasons = sanitized_reasons[:top_k]
+
+    # If has_images or has_video is True on a genuine review, append a positive reason
+    if (has_images or has_video) and (label == "genuine" or predicted_class == 0):
+        media_reason = {
+            "type": "media",
+            "text": "Customer photo/video attached (higher credibility signal)",
+            "weight": round(float(confidence), 4),
+        }
+        if not any(r.get("type") == "media" for r in final_reasons):
+            final_reasons.append(media_reason)
+
+    return final_reasons
 
 
 def explain_prediction(
     text: str,
     model_bundle: Any,
     top_k: int = 3,
+    has_images: bool = False,
+    has_video: bool = False,
 ) -> dict[str, Any]:
     """Analyze a single review and return label, confidence, and readable reasons.
 
@@ -560,6 +580,8 @@ def explain_prediction(
         text: Review text.
         model_bundle: Trained Pipeline or dictionary bundle.
         top_k: Maximum reasons to return.
+        has_images: Whether review includes customer photos. Defaults to False.
+        has_video: Whether review includes customer video. Defaults to False.
 
     Returns:
         Dictionary with keys: 'label', 'confidence', 'p_deceptive', 'reasons'.
@@ -580,7 +602,13 @@ def explain_prediction(
         p_deceptive = 1.0 if preds[0] == 1 else 0.0
 
     label, confidence = classify_probability(p_deceptive)
-    reasons = explain_review(text, model_bundle, top_k=top_k)
+    reasons = explain_review(
+        text,
+        model_bundle,
+        top_k=top_k,
+        has_images=has_images,
+        has_video=has_video,
+    )
 
     return {
         "label": label,

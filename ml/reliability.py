@@ -38,11 +38,15 @@ from ml.config import (
 logger = logging.getLogger(__name__)
 
 
-def _compute_non_suspicious_score(results: list[dict[str, Any]]) -> float:
+def _compute_non_suspicious_score(
+    results: list[dict[str, Any]],
+    reviews: Optional[list[dict[str, Any]]] = None,
+) -> float:
     """Compute confidence-weighted share of non-suspicious reviews.
 
     Args:
         results: List of prediction dictionaries containing 'label' and 'confidence'.
+        reviews: Optional list of review dictionaries to check for media presence.
 
     Returns:
         Score between 0.0 and 1.0 representing the share of non-suspicious reviews.
@@ -53,11 +57,27 @@ def _compute_non_suspicious_score(results: list[dict[str, Any]]) -> float:
     non_suspicious_mass = 0.0
     suspicious_mass = 0.0
 
-    for res in results:
+    media_map: dict[str, bool] = {}
+    if reviews:
+        for idx, r in enumerate(reviews):
+            rid = str(r.get("id", f"r{idx + 1}"))
+            media_map[rid] = bool(r.get("has_images") or r.get("has_video"))
+
+    for idx, res in enumerate(results):
         label = str(res.get("label", "")).lower()
         conf = float(res.get("confidence", 0.5))
         # Ensure confidence is within [0.5, 1.0]
         conf = max(0.5, min(1.0, conf))
+
+        rid = str(res.get("id", f"r{idx + 1}"))
+        has_media = media_map.get(rid, False)
+
+        # Authenticity boost for media-rich reviews
+        if has_media:
+            if label not in ("suspicious", "deceptive"):
+                conf = min(1.0, conf * 1.25)
+            else:
+                conf = max(0.5, conf * 0.75)
 
         if label in ("suspicious", "deceptive"):
             suspicious_mass += conf
@@ -272,50 +292,128 @@ def _compute_length_specificity_score(texts: list[str]) -> tuple[float, list[str
     return score, insights
 
 
+def _extract_seller_confidence(seller_info: Any) -> Optional[float]:
+    """Compute seller confidence score (0-100) from seller rating out of 5.
+
+    Args:
+        seller_info: Seller info dict (with 'rating' or 'seller_rating') or numeric rating.
+
+    Returns:
+        Confidence score between 0.0 and 100.0, or None if unavailable.
+    """
+    if seller_info is None:
+        return None
+
+    rating: Optional[float] = None
+    if isinstance(seller_info, (int, float)):
+        rating = float(seller_info)
+    elif isinstance(seller_info, dict):
+        val = seller_info.get("rating")
+        if val is None:
+            val = seller_info.get("seller_rating")
+        if val is not None:
+            try:
+                rating = float(val)
+            except (ValueError, TypeError):
+                rating = None
+
+    if rating is None:
+        return None
+
+    rating = max(0.0, min(5.0, rating))
+    return round((rating / 5.0) * 100.0, 1)
+
+
+def _compute_volume_risk(total: int) -> dict[str, Any]:
+    """Evaluate review volume risk based on sample size.
+
+    Args:
+        total: Total number of reviews.
+
+    Returns:
+        Dict with keys 'is_risky', 'level', 'warning'.
+    """
+    if total < 5:
+        return {
+            "is_risky": True,
+            "level": "High",
+            "warning": "Very few reviews. High risk of fabricated ratings or insufficient track record.",
+        }
+    elif total < 10:
+        return {
+            "is_risky": True,
+            "level": "Moderate",
+            "warning": "Limited review sample size.",
+        }
+    else:
+        return {
+            "is_risky": False,
+            "level": "Low",
+            "warning": None,
+        }
+
+
 def compute_reliability(
     reviews: list[dict[str, Any]],
     results: list[dict[str, Any]],
+    seller_info: Optional[Any] = None,
 ) -> dict[str, Any]:
     """Compute aggregate reliability score, label, and insights for a collection of reviews.
 
     Combines:
-    - 45% share of non-suspicious reviews (confidence-weighted)
+    - 45% share of non-suspicious reviews (confidence-weighted, media-boosted)
     - 20% near-duplicate penalty: pairwise cosine similarity on TF-IDF above 0.85
     - 15% rating-distribution skew: penalize J-shaped or all-5-star distributions (skipped if missing)
     - 10% review-burst penalty: many reviews on same day / short window (skipped if missing)
     - 10% average length/specificity of reviews
 
-    Labels:
-    - 70+ High
-    - 40-69 Moderate
-    - below 40 Low
-    - Fewer than 5 reviews: 'Not enough data'
+    Also computes:
+    - Product genuineness score (0-100) and categorical label
+    - Media review count and percentage
+    - Review volume risk penalty
+    - Seller confidence factor and review dissonance check
 
     Args:
-        reviews: List of review dictionaries (with 'id', 'text', optional 'rating', optional 'date').
+        reviews: List of review dictionaries (with 'id', 'text', optional 'rating', 'date', 'has_images', 'has_video').
         results: List of per-review prediction dictionaries (with 'id', 'label', 'confidence').
+        seller_info: Optional seller information (rating out of 5 or dict containing seller details).
 
     Returns:
         Dictionary with:
         {
             "reliability_score": int (0-100),
             "reliability_label": "High" | "Moderate" | "Low" | "Not enough data",
-            "insights": list[str]
+            "insights": list[str],
+            "product_genuineness_score": float (0.0-100.0),
+            "product_genuineness_label": "Likely Genuine" | "Moderate / Mixed" | "Potentially Deceptive / Risky",
+            "media_review_count": int,
+            "media_review_pct": float,
+            "volume_risk": {"is_risky": bool, "level": str, "warning": Optional[str]},
+            "seller_confidence": Optional[float]
         }
     """
     total = len(reviews)
+    seller_confidence = _extract_seller_confidence(seller_info)
+    volume_risk = _compute_volume_risk(total)
+
     if total == 0:
         return {
             "reliability_score": 0,
             "reliability_label": "Not enough data",
             "insights": ["No reviews provided to evaluate reliability."],
+            "product_genuineness_score": 0.0,
+            "product_genuineness_label": "Potentially Deceptive / Risky",
+            "media_review_count": 0,
+            "media_review_pct": 0.0,
+            "volume_risk": volume_risk,
+            "seller_confidence": seller_confidence,
         }
 
     texts = [str(r.get("text", "")) for r in reviews]
     all_insights: list[str] = []
 
     # 1. Non-suspicious confidence-weighted share (45%)
-    score_non_suspicious = _compute_non_suspicious_score(results)
+    score_non_suspicious = _compute_non_suspicious_score(results, reviews)
 
     # 2. Near-duplicate penalty (20%)
     score_near_dup, dup_insights = _compute_near_duplicate_score(texts)
@@ -361,6 +459,66 @@ def compute_reliability(
 
     reliability_score = int(round(np.clip(weighted_score * 100.0, 0.0, 100.0)))
 
+    # Compute media review statistics and product genuineness
+    media_review_count = 0
+    results_by_id = {str(res.get("id", "")): res for res in results}
+    review_genuineness_scores: list[float] = []
+    review_weights: list[float] = []
+
+    for idx, rev in enumerate(reviews):
+        rev_id = str(rev.get("id", f"r{idx + 1}"))
+        res = results_by_id.get(rev_id, results[idx] if idx < len(results) else {})
+
+        has_images = bool(rev.get("has_images", False))
+        has_video = bool(rev.get("has_video", False))
+        has_media = has_images or has_video
+        if has_media:
+            media_review_count += 1
+
+        # Determine deceptive probability
+        if "p_deceptive" in res:
+            p_dec = float(res["p_deceptive"])
+        elif res.get("label") == "genuine":
+            p_dec = 1.0 - float(res.get("confidence", 0.8))
+        elif res.get("label") in ("suspicious", "deceptive"):
+            p_dec = float(res.get("confidence", 0.8))
+        else:
+            p_dec = 0.5
+        p_dec = max(0.0, min(1.0, p_dec))
+
+        # Media Trust Multiplier: reduce deceptive prob by 25% and give higher weight
+        if has_media:
+            p_dec_adj = p_dec * 0.75
+            w = 1.5
+        else:
+            p_dec_adj = p_dec
+            w = 1.0
+
+        genuineness = 1.0 - p_dec_adj
+        review_genuineness_scores.append(genuineness)
+        review_weights.append(w)
+
+    media_review_pct = round((media_review_count / float(total)) * 100.0, 1)
+
+    # Product Genuineness Score (0-100)
+    total_weights = sum(review_weights)
+    if total_weights > 0:
+        weighted_gen = sum(w * g for w, g in zip(review_weights, review_genuineness_scores)) / total_weights
+        product_genuineness_score = round(float(np.clip(weighted_gen * 100.0, 0.0, 100.0)), 1)
+    else:
+        product_genuineness_score = 0.0
+
+    if product_genuineness_score >= 70.0:
+        product_genuineness_label = "Likely Genuine"
+    elif product_genuineness_score >= 40.0:
+        product_genuineness_label = "Moderate / Mixed"
+    else:
+        product_genuineness_label = "Potentially Deceptive / Risky"
+
+    # Volume Risk Warning
+    if volume_risk["warning"] and volume_risk["warning"] not in all_insights:
+        all_insights.append(volume_risk["warning"])
+
     # Determine label
     if total < MIN_REVIEWS_FOR_RELIABILITY:
         reliability_label = "Not enough data"
@@ -374,8 +532,41 @@ def compute_reliability(
     else:
         reliability_label = "Low"
 
+    # Check seller confidence dissonance
+    if seller_confidence is not None:
+        valid_ratings = []
+        for r in reviews:
+            val = r.get("rating")
+            if val is not None:
+                try:
+                    num = float(val)
+                    if 1.0 <= num <= 5.0:
+                        valid_ratings.append(num)
+                except (ValueError, TypeError):
+                    pass
+        avg_rating = float(np.mean(valid_ratings)) if valid_ratings else None
+
+        # Low seller rating (< 60.0 / 3.0 out of 5) contrasting with high praise
+        if seller_confidence < 60.0:
+            has_high_praise = (
+                (avg_rating is not None and avg_rating >= 4.0)
+                or product_genuineness_score >= 70.0
+            )
+            if has_high_praise:
+                seller_stars = f"{seller_confidence / 20.0:.1f}"
+                all_insights.append(
+                    f"Seller dissonance detected: poor seller rating ({seller_stars}/5) "
+                    f"conflicts sharply with high review praise."
+                )
+
     return {
         "reliability_score": reliability_score,
         "reliability_label": reliability_label,
         "insights": all_insights,
+        "product_genuineness_score": product_genuineness_score,
+        "product_genuineness_label": product_genuineness_label,
+        "media_review_count": media_review_count,
+        "media_review_pct": media_review_pct,
+        "volume_risk": volume_risk,
+        "seller_confidence": seller_confidence,
     }

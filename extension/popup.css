@@ -128,8 +128,41 @@ body {
 .idle-desc {
   font-size: 0.85rem;
   color: #475569;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   line-height: 1.45;
+}
+
+/* Page Suggestion Tip */
+.page-suggestion-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+  color: #1e40af;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.page-suggestion-tip .tip-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  margin-top: -1px;
+}
+
+.page-suggestion-tip .tip-text {
+  flex: 1;
+}
+
+.page-suggestion-tip em {
+  font-style: normal;
+  font-weight: 600;
+  color: #1d4ed8;
 }
 
 /* 2. Loading State */

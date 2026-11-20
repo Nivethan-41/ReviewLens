@@ -275,18 +275,24 @@ def _compute_length_specificity_score(texts: list[str]) -> tuple[float, list[str
     # Check for numbers / specific details in texts
     digit_ratio = sum(1 for t in texts if any(c.isdigit() for c in t)) / float(len(texts))
 
-    # Score based on target word count and presence of numbers/details
-    if avg_words >= SPECIFICITY_TARGET_WORD_COUNT:
+    # Score based on target word count and presence of numbers/details.
+    # Calibrated for Indian e-commerce consumer behavior where concise, genuine reviews
+    # (e.g. 4-20 words) are common and authentic.
+    if avg_words >= 15.0:
         length_ratio = 1.0
+    elif avg_words >= 8.0:
+        length_ratio = 0.88 + 0.12 * ((avg_words - 8.0) / 7.0)
+    elif avg_words >= 4.0:
+        length_ratio = 0.75 + 0.13 * ((avg_words - 4.0) / 4.0)
     else:
-        length_ratio = min(1.0, max(0.1, avg_words / float(SPECIFICITY_TARGET_WORD_COUNT)))
+        length_ratio = max(0.40, avg_words / 4.0)
 
-    combined = 0.7 * length_ratio + 0.3 * digit_ratio
+    combined = 0.75 * length_ratio + 0.25 * digit_ratio
     score = float(np.clip(combined, 0.0, 1.0))
 
-    if avg_words < 15.0:
+    if avg_words < 4.0:
         insights.append(
-            f"Reviews are unusually short on average ({int(round(avg_words))} words), lacking specific details"
+            f"Reviews are unusually short on average ({int(round(avg_words))} words), lacking detail"
         )
 
     return score, insights
@@ -485,6 +491,22 @@ def compute_reliability(
         else:
             p_dec = 0.5
         p_dec = max(0.0, min(1.0, p_dec))
+
+        # Indian consumer pattern adjustment: concise, natural short reviews (2-25 words)
+        # without bot spam or all-caps markers receive an authenticity trust boost
+        rev_text = str(rev.get("text", "")).strip()
+        word_count = len(rev_text.split())
+        text_lower = rev_text.lower()
+        has_hype_spam = any(
+            spam in text_lower
+            for spam in ["wow wow", "buy buy", "must buy must buy", "best ever best ever", "100% recommend"]
+        )
+        is_all_caps = len(rev_text) > 6 and rev_text.isupper()
+        is_concise_sweet = (2 <= word_count <= 25) and not has_hype_spam and not is_all_caps
+
+        if is_concise_sweet and res.get("label") != "suspicious":
+            # Notch up trust level for short and sweet reviews (20% reduction in deceptive prob)
+            p_dec = max(0.0, p_dec * 0.80)
 
         # Media Trust Multiplier: reduce deceptive prob by 25% and give higher weight
         if has_media:

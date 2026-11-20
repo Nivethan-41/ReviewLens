@@ -676,7 +676,17 @@ document.addEventListener("DOMContentLoaded", () => {
       snippetEl.className = "review-snippet";
 
       const rawText = (meta.text || r.text || "").trim();
-      let snippet = rawText;
+      let snippet = rawText
+        .replace(/Brief content visible,?\s*double tap to read full content\.?/gi, " ")
+        .replace(/Full content visible,?\s*double tap to read brief content\.?/gi, " ")
+        .replace(/Double tap to read (?:full|brief) content\.?/gi, " ")
+        .replace(/(?:^|\b|(?<=[a-z0-9.,!?]))(?:Read|Show|View|See)\s*(?:more|less)(?:[\s/.,-]*(?:Read|Show|View|See)\s*(?:more|less))*(?:$|\b|(?=[A-Z\s.,!?]))/gi, " ")
+        .replace(/\bTranslate review to English\b\.?/gi, " ")
+        .replace(/\bTranslated by Amazon\b\.?/gi, " ")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
       if (snippet.length > 120) {
         snippet = `${snippet.substring(0, 120)}…`;
       }

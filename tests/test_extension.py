@@ -553,6 +553,11 @@ def test_popup_html_elements_and_dashboard_structure(extension_dir: Path) -> Non
     assert soup.select_one("#sort-toggle-btn") is not None, "Missing #sort-toggle-btn"
     assert soup.select_one("#sort-toggle-text") is not None, "Missing #sort-toggle-text"
 
+    # 6. Page suggestion tip for deeper reviews analysis
+    tip_el = soup.select_one(".page-suggestion-tip")
+    assert tip_el is not None, "Missing .page-suggestion-tip banner"
+    assert "page full of reviews" in tip_el.get_text().lower()
+
 
 def test_popup_css_dashboard_styles(extension_dir: Path) -> None:
     """Verify popup.css contains styling rules for the risk banner, gauges, media badge, and callout."""
@@ -602,5 +607,38 @@ def test_popup_js_integration_and_rendering(extension_dir: Path) -> None:
     assert "media-trust-highlight" in content
     assert "sort-toggle-btn" in content
     assert "data-filter" in content
+
+
+def test_content_js_sanitize_review_text_via_node(extension_dir: Path) -> None:
+    """Verify content.js sanitizes expander text, Read moreRead less, author ratings, and HTML tags."""
+    import subprocess
+    import shutil
+
+    if not shutil.which("node"):
+        pytest.skip("Node.js is not installed on this system")
+
+    content_js_path = extension_dir / "content.js"
+    assert content_js_path.exists()
+
+    js_snippet = r"""
+    const { sanitizeReviewText } = require("./extension/content.js");
+    const test1 = sanitizeReviewText('<img src="https://m.media-amazon.com/images/default.png"/>bhavan4 out of 5 starsGood Review! Read moreRead less');
+    const test2 = sanitizeReviewText('Brief content visible, double tap to read full content.Full content visible, double tap to read brief content. Amazing phone! Read more');
+    const test3 = sanitizeReviewText('Excellent sound quality.Read moreRead less');
+    console.log(JSON.stringify({ test1, test2, test3 }));
+    """
+
+    res = subprocess.run(
+        ["node", "-e", js_snippet],
+        capture_output=True,
+        text=True,
+        cwd=PROJECT_ROOT,
+        check=True,
+    )
+    data = json.loads(res.stdout.strip())
+    assert data["test1"] == "Good Review!"
+    assert data["test2"] == "Amazing phone!"
+    assert data["test3"] == "Excellent sound quality."
+
 
 

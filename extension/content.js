@@ -15,7 +15,7 @@ const SELECTORS = {
     // Review card container
     reviewCard: "[data-hook='review']",
     // Review content body
-    reviewBody: "[data-hook='review-body'], [data-hook='review-collapsed']",
+    reviewBody: "[data-hook='review-body'] span:not(.a-icon-alt):not(.a-letter-space), [data-hook='review-body'], [data-hook='review-collapsed'] span:not(.a-icon-alt), [data-hook='review-collapsed'], .review-text-content span, .review-text-content, .review-text, span[data-hook='review-body']",
     // Star rating element
     rating: "[data-hook='review-star-rating'], [data-hook='cmps-review-star-rating'], i.a-icon-star",
     // Review submission date
@@ -23,7 +23,7 @@ const SELECTORS = {
     // Review title
     title: "[data-hook='review-title']",
     // Reviewer name
-    author: "[data-hook='genome-widget'] .a-profile-name",
+    author: "[data-hook='genome-widget'] .a-profile-name, .a-profile-name",
     // Media indicators: .review-image-tile, [data-hook="review-image-tile"], video tags
     mediaImage: ".review-image-tile, [data-hook='review-image-tile'], .review-image-tile-section img, [data-hook='review-image-container'] img",
     mediaVideo: "video, [data-hook='review-video'], .cr-video-desktop",
@@ -77,34 +77,297 @@ const SELECTORS = {
     sellerRating: "span[class*='SupplierRating'], [class*='rating']",
   },
   generic: {
-    // Review containers
-    reviewCard: "[itemscope][itemtype*='Review'], [itemprop='review'], [class*='review-card' i], [class*='review-item' i], article.review",
+    // Review containers across global and regional sites (Amazon, Flipkart, Meesho, Myntra, Nykaa, Ajio, Walmart, Target, Best Buy, eBay, AliExpress, Shopify widgets: Judge.me, Loox, Yotpo, Stamped, Okendo, Reviews.io, Trustpilot, etc.)
+    reviewCard: [
+      "[itemscope][itemtype*='Review']",
+      "[itemprop='review']",
+      "[data-hook='review']",
+      "[class*='review-card' i]",
+      "[class*='review-item' i]",
+      "[class*='reviewCard' i]",
+      "[class*='review_item' i]",
+      "[class*='user-review' i]",
+      "[class*='customer-review' i]",
+      "[class*='detailed-reviews' i] [class*='user-review' i]",
+      "[class*='feedback-item' i]",
+      ".jdgm-rev",
+      ".loox-review",
+      ".yotpo-review",
+      ".stamped-review",
+      ".oke-review",
+      ".Review-container",
+      "article[data-service-review-card]",
+      "article.review",
+      "[data-testid*='review' i]",
+      "[data-test*='review' i]"
+    ].join(", "),
     // Review body
-    reviewBody: "[itemprop='reviewBody'], .review-text, .review-body, .review-content, p.comment",
+    reviewBody: [
+      "[itemprop='reviewBody']",
+      "[data-hook='review-body'] span:not(.a-icon-alt):not(.a-letter-space)",
+      "[data-hook='review-body']",
+      "[data-hook='review-collapsed'] span:not(.a-icon-alt)",
+      "[data-hook='review-collapsed']",
+      ".review-text-content span",
+      ".review-text-content",
+      ".review-text",
+      ".review-body",
+      ".review-content",
+      "p.comment",
+      "[class*='reviewText' i]",
+      "[class*='review-text' i]",
+      "[class*='review-desc' i]",
+      "[class*='review_body' i]",
+      "[class*='reviewBody' i]",
+      ".jdgm-rev__body",
+      ".loox-review-content",
+      ".oke-reviewContent-body",
+      "[data-service-review-text-typography]"
+    ].join(", "),
     // Rating
-    rating: "[itemprop='reviewRating'] [itemprop='ratingValue'], [itemprop='ratingValue'], [class*='rating' i], [class*='star' i]",
+    rating: [
+      "[itemprop='reviewRating'] [itemprop='ratingValue']",
+      "[itemprop='ratingValue']",
+      "[data-hook='review-star-rating']",
+      "i.a-icon-star",
+      "[class*='star-rating' i]",
+      "[class*='rating-badge' i]",
+      "[class*='rating' i]",
+      "[class*='star' i]",
+      "[aria-label*='star' i]",
+      "[aria-label*='out of 5' i]",
+      "[data-testid*='rating' i]"
+    ].join(", "),
     // Date
-    date: "[itemprop='datePublished'], time, [class*='date' i]",
+    date: [
+      "[itemprop='datePublished']",
+      "time",
+      "[data-hook='review-date']",
+      "[class*='review-date' i]",
+      "[class*='date' i]",
+      "[class*='time' i]",
+      "[data-testid*='date' i]"
+    ].join(", "),
+    // Author
+    author: [
+      "[itemprop='author'] [itemprop='name']",
+      "[itemprop='author']",
+      "[data-hook='genome-widget'] .a-profile-name",
+      ".a-profile-name",
+      "[class*='author' i]",
+      "[class*='reviewer' i]",
+      "[class*='profile-name' i]",
+      "[class*='user-name' i]"
+    ].join(", "),
+    // Title
+    title: [
+      "[data-hook='review-title']",
+      "[class*='review-title' i]",
+      "[class*='reviewTitle' i]",
+      "[class*='review-headline' i]"
+    ].join(", "),
     // Media indicators
-    mediaImage: ".review-image, img.review-image, [class*='review-image' i], img[class*='review-photo' i]",
+    mediaImage: [
+      ".review-image",
+      "img.review-image",
+      "[class*='review-image' i]",
+      "img[class*='review-photo' i]",
+      ".jdgm-rev__pics",
+      ".loox-review-photo",
+      ".yotpo-review-image",
+      "img"
+    ].join(", "),
     mediaVideo: "video, [class*='review-video' i], [class*='video' i]",
     // Verified purchase
-    verifiedPurchase: "[class*='verified' i], [class*='certified' i]",
+    verifiedPurchase: [
+      "[data-hook='avp-badge']",
+      "._2mcSum",
+      "[class*='verified' i]",
+      "[class*='certified' i]",
+      "[class*='buyer' i]"
+    ].join(", "),
     // Seller / supplier card
-    sellerCard: "#merchant-info, #sellerName, #supplierName, [class*='seller-info' i], [class*='supplier' i]",
+    sellerCard: "#merchant-info, #sellerName, #supplierName, [class*='seller-info' i], [class*='supplier' i], [class*='merchant' i]",
     // Seller / supplier rating
-    sellerRating: "[class*='seller-rating' i], [class*='supplier-rating' i], [class*='rating' i]",
+    sellerRating: "[class*='seller-rating' i], [class*='supplier-rating' i], [class*='rating' i]"
   },
 };
 
 /**
  * Helper to clean and normalize whitespace from extracted text.
+ * Strips any stray HTML tags (e.g. avatar img tags), decodes non-breaking spaces,
+ * and collapses multiple whitespace characters.
  * @param {string} str - Raw input string.
  * @returns {string} Trimmed string with collapsed spaces.
  */
 function cleanText(str) {
   if (!str) return "";
-  return str.replace(/\s+/g, " ").trim();
+  return str
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Remove extraneous boilerplate scraped from review cards, such as
+ * author profile names, star rating expressions, dates, verification tags,
+ * and helpful vote counters.
+ *
+ * @param {string} rawText - Extracted text string.
+ * @param {string} [author] - Optional author name to strip from prefix.
+ * @param {string} [title] - Optional review title to strip from prefix if redundant.
+ * @returns {string} Clean, isolated review content text.
+ */
+function sanitizeReviewText(rawText, author = "", title = "") {
+  if (!rawText) return "";
+  let text = cleanText(rawText);
+
+  // 0. Strip Amazon expander/collapsible accessibility boilerplate
+  text = text.replace(/Brief content visible,?\s*double tap to read full content\.?/gi, " ");
+  text = text.replace(/Full content visible,?\s*double tap to read brief content\.?/gi, " ");
+  text = text.replace(/Double tap to read (?:full|brief) content\.?/gi, " ");
+
+  // 0b. Strip all variants of "Read more", "Read less", "Show more", "Show less", "View more", "See more"
+  // Handles glued text like "Read moreRead less", "qualityRead more", separated "Read more / Read less", or trailing "Read more"
+  text = text.replace(/(?:^|\b|(?<=[a-z0-9.,!?]))(?:Read|Show|View|See)\s*(?:more|less)(?:[\s/.,-]*(?:Read|Show|View|See)\s*(?:more|less))*(?:$|\b|(?=[A-Z\s.,!?]))/gi, " ");
+  text = text.replace(/\bTranslate review to English\b\.?/gi, " ");
+  text = text.replace(/\bTranslated by Amazon\b\.?/gi, " ");
+  text = text.replace(/\s+/g, " ").trim();
+
+  // 1. Remove author prefix if present (e.g. "bhavan 4 out of 5 stars ...")
+  if (author && author.length >= 2) {
+    const escapedAuthor = author.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const authorRegex = new RegExp(`^${escapedAuthor}\\s*`, "i");
+    text = text.replace(authorRegex, "").trim();
+  }
+
+  // Also strip generic author-before-rating patterns (e.g. "bhavan 4 out of 5 stars")
+  text = text.replace(/^[A-Za-z0-9_.\s]{2,30}?(?=\s*[1-5](?:\.\d+)?\s*(?:out of|\/)\s*5)/i, "").trim();
+
+  // 2. Strip star rating prefixes (e.g. "4 out of 5 stars", "4.0/5", "5 stars", "5★")
+  text = text.replace(/^[1-5](?:\.\d+)?\s*(?:out of|\/)\s*5(?:\s*stars?)?\s*/i, "").trim();
+  text = text.replace(/^[1-5]\s*stars?\s*/i, "").trim();
+  text = text.replace(/^[1-5]\s*★\s*/i, "").trim();
+
+  // 3. Strip review title prefix if identical to start of text and body continues after it
+  if (title && title.length >= 3 && text.toLowerCase().startsWith(title.toLowerCase())) {
+    const remainder = text.substring(title.length).trim();
+    if (remainder.length >= 3) {
+      text = remainder;
+    }
+  }
+
+  // 4. Strip date expressions at start: "Reviewed in India on 12 October 2026", "Reviewed on ..."
+  text = text.replace(/^Reviewed in [A-Za-z\s]+ on \d{1,2}\s+[A-Za-z]+\s+\d{4}\s*/i, "").trim();
+  text = text.replace(/^Reviewed on \d{1,2}\s+[A-Za-z]+\s+\d{4}\s*/i, "").trim();
+  text = text.replace(/^Reviewed in [A-Za-z\s]+ on [A-Za-z]+\s+\d{1,2},?\s+\d{4}\s*/i, "").trim();
+  text = text.replace(/^\d{4}-\d{2}-\d{2}\s*/i, "").trim();
+
+  // 5. Strip "Verified Purchase" / "Certified Buyer" boilerplate at start
+  text = text.replace(/^(?:Verified Purchase|Certified Buyer|Helpful|Report abuse|Report)\s*/gi, "").trim();
+
+  // 6. Strip trailing boilerplate (e.g. "X people found this helpful", "Was this review helpful")
+  text = text.replace(/\b\d+\s+people found this helpful\b.*$/gi, "").trim();
+  text = text.replace(/\bOne person found this helpful\b.*$/gi, "").trim();
+  text = text.replace(/\bWas this review helpful to you\?.*$/gi, "").trim();
+  text = text.replace(/\bReport abuse\b.*$/gi, "").trim();
+
+  return text.trim();
+}
+
+/**
+ * Safely extracts only the actual review body text from a review card element.
+ * Isolates the body element and strips out reviewer profile avatars, names,
+ * ratings, dates, verified tags, and action buttons.
+ *
+ * @param {Element} card - Review container DOM element.
+ * @param {string} [siteKey] - Key for SELECTORS (amazon, flipkart, meesho, generic).
+ * @returns {string} Clean, isolated review body text.
+ */
+function extractReviewBodyText(card, siteKey = "generic") {
+  if (!card) return "";
+
+  const sel = SELECTORS[siteKey] || SELECTORS.generic;
+
+  // Extract author and title first to help clean redundant prefixes
+  let author = "";
+  let title = "";
+
+  if (sel && sel.author) {
+    const aEl = card.querySelector(sel.author);
+    if (aEl) author = cleanText(aEl.textContent);
+  }
+  if (!author) {
+    const aEl = card.querySelector(".a-profile-name, [data-hook='genome-widget'] .a-profile-name, [class*='author' i]");
+    if (aEl) author = cleanText(aEl.textContent);
+  }
+
+  if (sel && sel.title) {
+    const tEl = card.querySelector(sel.title);
+    if (tEl) title = cleanText(tEl.textContent);
+  }
+
+  // 1. Try dedicated body selector
+  let bodyEl = null;
+  if (sel && sel.reviewBody) {
+    bodyEl = card.querySelector(sel.reviewBody);
+  }
+
+  // Cross-site fallback selectors
+  if (!bodyEl) {
+    bodyEl = card.querySelector(
+      "[data-hook='review-body'] span:not(.a-icon-alt), [data-hook='review-body'], " +
+      "[data-hook='review-collapsed'] span:not(.a-icon-alt), [data-hook='review-collapsed'], " +
+      ".review-text-content span, .review-text-content, .review-text, span[data-hook='review-body'], " +
+      "[itemprop='reviewBody'], div.t-ZTKy, div._1135gP, p[class*='ReviewText'], div[class*='review-text']"
+    );
+  }
+
+  if (bodyEl) {
+    const bodyClone = bodyEl.cloneNode(true);
+    const junkInBody = bodyClone.querySelectorAll(
+      ".a-icon-alt, .a-letter-space, .a-expander-prompt, .a-expander-header, " +
+      "[class*='expander-prompt' i], [class*='expander-header' i], " +
+      "[class*='read-more' i], [class*='readMore' i], [class*='show-more' i], [class*='showMore' i], " +
+      "[data-action='a-expander-toggle'], .cr-original-review-content, .cr-translate-this-review-section, " +
+      "button, script, style, svg, img, video"
+    );
+    junkInBody.forEach((el) => el.remove());
+    const inlineTags = bodyClone.querySelectorAll("span, a, p, div, br");
+    inlineTags.forEach((t) => {
+      t.after(document.createTextNode(" "));
+    });
+    const raw = cleanText(bodyClone.textContent);
+    const sanitized = sanitizeReviewText(raw, author, title);
+    if (sanitized.length >= 3) {
+      return sanitized;
+    }
+  }
+
+  // 2. Fallback: clone card and remove all known metadata elements
+  const cardClone = card.cloneNode(true);
+  const metadataSelectors = [
+    "[data-hook='genome-widget']", ".a-profile", ".a-profile-avatar", ".a-profile-name",
+    "[class*='author' i]", "[class*='profile' i]", "[class*='avatar' i]",
+    "[data-hook='review-star-rating']", "[data-hook='cmps-review-star-rating']",
+    "i.a-icon-star", ".a-icon-alt", "[class*='rating' i]", "[class*='star' i]",
+    "[data-hook='review-date']", "[class*='date' i]", "time",
+    "[data-hook='review-title']", "[class*='title' i]",
+    "[data-hook='avp-badge']", "[class*='verified' i]", "[class*='certified' i]",
+    "[data-hook='helpful-vote-statement']", "[data-hook='review-voting-widget']",
+    "[class*='helpful' i]", "button", "form", "a[href*='report']",
+    ".a-expander-prompt", ".a-expander-header", "[class*='expander-prompt' i]", "[class*='expander-header' i]",
+    "[data-action='a-expander-toggle']", ".cr-original-review-content",
+    "img", "svg", "video", "script", "style"
+  ].join(", ");
+
+  const toRemove = cardClone.querySelectorAll(metadataSelectors);
+  toRemove.forEach((el) => el.remove());
+
+  const fallbackText = cleanText(cardClone.textContent);
+  return sanitizeReviewText(fallbackText, author, title);
 }
 
 /**
@@ -504,9 +767,8 @@ function extractFromPlatformSelectors() {
   // Amazon India cards: [data-hook="review"]
   const amazonCards = document.querySelectorAll(SELECTORS.amazon.reviewCard);
   amazonCards.forEach((card, idx) => {
-    const bodyEl = card.querySelector(SELECTORS.amazon.reviewBody);
-    const text = cleanText(bodyEl ? bodyEl.textContent : card.textContent);
-    if (text.length >= 10) {
+    const text = extractReviewBodyText(card, "amazon");
+    if (text.length >= 4) {
       const meta = extractMetaFromContainer(card);
       const indicators = extractIndicatorsFromContainer(card);
       reviews.push({
@@ -528,10 +790,9 @@ function extractFromPlatformSelectors() {
     if (card.matches && card.matches("div._27M-vq") && card.querySelector("div.col._2wzgFH")) {
       return;
     }
-    const bodyEl = card.querySelector(SELECTORS.flipkart.reviewBody) || card;
-    const text = cleanText(bodyEl ? bodyEl.textContent : card.textContent);
-    if (text.length >= 10) {
-      const fullContainer = card.closest("div._27M-vq") || card;
+    const fullContainer = card.closest("div._27M-vq") || card;
+    const text = extractReviewBodyText(fullContainer, "flipkart");
+    if (text.length >= 4) {
       const meta = extractMetaFromContainer(fullContainer);
       const indicators = extractIndicatorsFromContainer(fullContainer);
       reviews.push({
@@ -553,13 +814,38 @@ function extractFromPlatformSelectors() {
     if (card.closest(SELECTORS.amazon.reviewCard) || card.closest(SELECTORS.flipkart.reviewCard)) {
       return;
     }
-    const bodyEl = card.querySelector(SELECTORS.meesho.reviewBody) || card;
-    const text = cleanText(bodyEl ? bodyEl.textContent : card.textContent);
-    if (text.length >= 10) {
+    const text = extractReviewBodyText(card, "meesho");
+    if (text.length >= 4) {
       const meta = extractMetaFromContainer(card);
       const indicators = extractIndicatorsFromContainer(card);
       reviews.push({
         id: card.id || `msh-${idx + 1}`,
+        text,
+        rating: meta.rating,
+        date: meta.date,
+        has_images: indicators.has_images,
+        has_video: indicators.has_video,
+        verified_purchase: indicators.verified_purchase,
+      });
+    }
+  });
+
+  // Cross-site review cards (Myntra, Nykaa, Ajio, Tata CliQ, Shopify Judge.me, Loox, Yotpo, Stamped, Okendo, Walmart, Target, Best Buy, eBay, AliExpress, Trustpilot, etc.)
+  const crossSiteCards = document.querySelectorAll(SELECTORS.generic.reviewCard);
+  crossSiteCards.forEach((card, idx) => {
+    if (
+      card.closest(SELECTORS.amazon.reviewCard) ||
+      card.closest(SELECTORS.flipkart.reviewCard) ||
+      card.closest(SELECTORS.meesho.reviewCard)
+    ) {
+      return;
+    }
+    const text = extractReviewBodyText(card, "generic");
+    if (text.length >= 4) {
+      const meta = extractMetaFromContainer(card);
+      const indicators = extractIndicatorsFromContainer(card);
+      reviews.push({
+        id: card.id || `gen-${idx + 1}`,
         text,
         rating: meta.rating,
         date: meta.date,
@@ -642,13 +928,12 @@ function extractFromSchema() {
     "[itemscope][itemtype*='Review'], [itemprop='review']"
   );
   microdataReviews.forEach((card, idx) => {
-    const bodyEl = card.querySelector("[itemprop='reviewBody']");
-    if (!bodyEl) return;
-
-    const text = cleanText(bodyEl.textContent);
-    if (text.length < 10) return;
-
     const meta = extractMetaFromContainer(card);
+    const bodyEl = card.querySelector("[itemprop='reviewBody']");
+    const rawText = bodyEl ? bodyEl.textContent : card.textContent;
+    const text = sanitizeReviewText(rawText, meta.author || "", meta.title || "");
+    if (text.length < 4) return;
+
     const indicators = extractIndicatorsFromContainer(card);
     reviews.push({
       id: card.id || `r${idx + 1}`,
@@ -705,12 +990,12 @@ function extractFromSemanticAttributes() {
       return;
     }
 
-    const text = cleanText(el.textContent);
-    if (text.length < 10 || text.length > 5000) return;
-
     const container = findReviewContainer(el);
     const meta = extractMetaFromContainer(container);
     const indicators = extractIndicatorsFromContainer(container);
+
+    const text = sanitizeReviewText(el.textContent, meta.author, meta.title);
+    if (text.length < 4 || text.length > 5000) return;
 
     reviews.push({
       id: container.id || el.id || `r${idx + 1}`,
@@ -747,8 +1032,8 @@ function extractFromRepeatedSiblings() {
       const child = children[i];
       const text = cleanText(child.textContent);
 
-      // Check text length constraint (40-3000 chars)
-      if (text.length < 40 || text.length > 3000) continue;
+      // Check text length constraint (10-3000 chars)
+      if (text.length < 10 || text.length > 3000) continue;
 
       // Check star rating pattern
       const hasRatingPattern =
@@ -765,23 +1050,25 @@ function extractFromRepeatedSiblings() {
         const paragraphs = Array.from(child.querySelectorAll("p, div, span")).filter(
           (p) => {
             const pText = cleanText(p.textContent);
-            return pText.length >= 40 && pText.length <= 3000;
+            return pText.length >= 10 && pText.length <= 3000;
           }
         );
 
-        const reviewText = paragraphs.length > 0
-          ? cleanText(paragraphs[0].textContent)
-          : text;
+        const reviewText = sanitizeReviewText(
+          paragraphs.length > 0 ? paragraphs[0].textContent : text
+        );
 
-        siblingMatches.push({
-          id: child.id || `r${i + 1}`,
-          text: reviewText,
-          rating,
-          date,
-          has_images: indicators.has_images,
-          has_video: indicators.has_video,
-          verified_purchase: indicators.verified_purchase,
-        });
+        if (reviewText.length >= 4) {
+          siblingMatches.push({
+            id: child.id || `r${i + 1}`,
+            text: reviewText,
+            rating,
+            date,
+            has_images: indicators.has_images,
+            has_video: indicators.has_video,
+            verified_purchase: indicators.verified_purchase,
+          });
+        }
       }
     }
 
@@ -805,8 +1092,8 @@ function deduplicateAndFormat(rawReviews) {
 
   for (const item of rawReviews) {
     if (!item || !item.text) continue;
-    const clean = cleanText(item.text);
-    if (clean.length < 10) continue;
+    const clean = sanitizeReviewText(item.text);
+    if (clean.length < 4) continue;
 
     const key = clean.toLowerCase();
     if (!seenTexts.has(key)) {
@@ -884,6 +1171,8 @@ if (typeof module !== "undefined" && module.exports) {
     extractSellerInfo,
     extractIndicatorsFromContainer,
     extractFromPlatformSelectors,
+    extractReviewBodyText,
+    sanitizeReviewText,
     cleanText,
     parseRating,
     parseDate,

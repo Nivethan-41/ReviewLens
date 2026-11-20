@@ -278,6 +278,22 @@ class ModelService:
         for idx, cleaned_item in enumerate(cleaned_reviews):
             p_deceptive = float(probs[idx][1]) if probs.shape[1] > 1 else float(probs[idx][0])
 
+            # Indian consumer pattern adjustment:
+            # Short and sweet reviews (2 to 25 words) that are natural (not repetitive spam or all-caps)
+            # are authentic and common. If p_deceptive is borderline due to brevity, notch up the trust.
+            raw_t = cleaned_item["text"].strip()
+            w_cnt = len(raw_t.split())
+            t_lower = raw_t.lower()
+            has_hype_spam = any(
+                spam in t_lower
+                for spam in ["wow wow", "buy buy", "must buy must buy", "best ever best ever", "100% recommend"]
+            )
+            is_all_caps = len(raw_t) > 6 and raw_t.isupper()
+
+            if 2 <= w_cnt <= 25 and not has_hype_spam and not is_all_caps:
+                if p_deceptive < 0.65:
+                    p_deceptive = max(0.0, p_deceptive * 0.82)
+
             label, confidence = classify_probability(
                 p_deceptive,
                 deceptive_label="suspicious",
